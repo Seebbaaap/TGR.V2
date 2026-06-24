@@ -5,6 +5,8 @@ import MpSubnav from "./MpSubnav";
 import MercadoPublicoTable from "./MercadoPublicoTable";
 import SkeletonTabla from "@/components/shared/SkeletonTabla";
 import { useMercadoPublico } from "./useMercadoPublico";
+import AvisoDesdeDb from "./AvisoDesdeDb";
+
 
 function formatFecha(valor) {
     if (!valor) return "—";
@@ -60,7 +62,7 @@ function EstadoBadge({ estado }) {
 }
 
 export default function LicitacionesVisualizer() {
-    const { data, loading, error, fecha, total } = useMercadoPublico("licitaciones");
+    const { data, loading, error, fecha, total, desdeDb } = useMercadoPublico("licitaciones");
 
     const [busqueda, setBusqueda] = useState("");
     const [estadoFiltro, setEstadoFiltro] = useState("");
@@ -222,9 +224,15 @@ export default function LicitacionesVisualizer() {
                     </div>
                 ))}
             </div>
-
+            <AvisoDesdeDb           
+                visible={desdeDb}
+                hayFilas={data.length > 0}
+                fecha={fecha}
+                modulo="licitaciones"
+            />
             {error && (
                 <div
+                
                     style={{
                         padding: "0.75rem 1rem",
                         borderRadius: "0.75rem",
@@ -234,8 +242,10 @@ export default function LicitacionesVisualizer() {
                         fontSize: "0.82rem",
                     }}
                 >
+                    
                     {error}
                 </div>
+                
             )}
 
             {!loading && (

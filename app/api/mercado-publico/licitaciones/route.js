@@ -8,8 +8,6 @@ export async function GET(request) {
         const resultado = await getLicitaciones({
             estado: searchParams.get("estado") || "",
             textoBusqueda: searchParams.get("q") || "",
-            pagina: Number(searchParams.get("pagina") || 1),
-            tamanoPagina: Number(searchParams.get("tamanoPagina") || 50),
         });
 
         return NextResponse.json(resultado);

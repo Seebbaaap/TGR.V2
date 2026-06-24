@@ -9,8 +9,6 @@ export async function GET(request) {
             estado: searchParams.get("estado") || "",
             region: searchParams.get("region") || "",
             textoBusqueda: searchParams.get("q") || "",
-            pagina: Number(searchParams.get("pagina") || 1),
-            tamanoPagina: Number(searchParams.get("tamanoPagina") || 50),
         });
 
         return NextResponse.json(resultado);

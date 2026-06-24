@@ -1,6 +1,10 @@
 import { fetchMercadoPublico } from "@/services/mercado-publico/mercadoPublicoClient";
 import { mapLicitacion } from "@/services/mercado-publico/mercadoPublicoMapper";
 import { extraerListado } from "@/lib/mercado-publico/extraerListado";
+import {
+    upsertFilasMercadoPublico,
+    listarFilasMercadoPublico,
+} from "@/services/supabase/mercadoPublicoRepo";
 
 function getFechaHoy() {
     const hoy = new Date();
@@ -10,28 +14,61 @@ function getFechaHoy() {
     return `${dd}${mm}${yyyy}`;
 }
 
+function respuestaExito(todasLasFilas, fechaUsada, desdeDb) {
+    return {
+        filas: todasLasFilas,
+        todasLasFilas,
+        totalRegistros: todasLasFilas.length,
+        fechaUsada,
+        desdeDb,
+    };
+}
+
 export async function getLicitaciones({
     estado = "",
     textoBusqueda = "",
-    pagina = 1,
-    tamanoPagina = 50,
 } = {}) {
-    const json = await fetchMercadoPublico("/licitaciones.json", {
-        fecha: getFechaHoy(),
-        estado,
-        ...(textoBusqueda ? { codigo: textoBusqueda } : {}),
-    });
+    const fechaConsulta = getFechaHoy();
 
-    const lista = extraerListado(json);
-    const filas = lista.map(mapLicitacion);
-    const inicio = (pagina - 1) * tamanoPagina;
+    try {
+        const json = await fetchMercadoPublico("/licitaciones.json", {
+            fecha: fechaConsulta,
+            estado,
+            ...(textoBusqueda ? { codigo: textoBusqueda } : {}),
+        });
 
-    return {
-        filas: filas.slice(inicio, inicio + tamanoPagina),
-        totalRegistros: filas.length,
-        paginaActual: pagina,
-        tamanoPagina,
-        paginacion: Math.max(1, Math.ceil(filas.length / tamanoPagina)),
-        fechaUsada: getFechaHoy(),
-    };
+        const lista = extraerListado(json);
+        const todasLasFilas = lista
+            .map(mapLicitacion)
+            .filter((f) => f?.codigo);
+
+        if (todasLasFilas.length > 0) {
+            try {
+                await upsertFilasMercadoPublico("licitaciones", todasLasFilas);
+            } catch (upsertError) {
+                console.warn(
+                    "[licitaciones] No se pudo guardar en Supabase:",
+                    upsertError.message
+                );
+            }
+        }
+
+        return respuestaExito(todasLasFilas, fechaConsulta, false);
+    } catch (error) {
+        console.warn("[licitaciones] API falló, leyendo Supabase:", error.message);
+
+        const { filas, totalRegistros } = await listarFilasMercadoPublico(
+            "licitaciones",
+            { limite: 50000 }
+        );
+
+        return {
+            filas,
+            todasLasFilas: filas,
+            totalRegistros,
+            fechaUsada: fechaConsulta,
+            desdeDb: filas.length > 0,
+            error: filas.length === 0 ? error.message : null,
+        };
+    }
 }

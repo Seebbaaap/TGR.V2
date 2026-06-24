@@ -1,79 +1,115 @@
-import { fetchCompraAgilBeta } from "@/services/mercado-publico/compraAgilBetaClient";
+import { fetchCompraAgil } from "@/services/mercado-publico/fetchCompraAgil";
 import { mapCompraAgil } from "@/services/mercado-publico/mercadoPublicoMapper";
-import { extraerListado } from "@/lib/mercado-publico/extraerListado";
+import {
+    upsertFilasMercadoPublico,
+    listarFilasMercadoPublico,
+} from "@/services/supabase/mercadoPublicoRepo";
 
-function getFechaHoy() {
-    const hoy = new Date();
-    const dd = String(hoy.getDate()).padStart(2, "0");
-    const mm = String(hoy.getMonth() + 1).padStart(2, "0");
-    const yyyy = hoy.getFullYear();
-    return `${dd}${mm}${yyyy}`;
+const TAMANO_PAGINA_API = 50;
+
+function obtenerRangoPublicacion(diasAtras = 7) {
+    const hasta = new Date();
+    const desde = new Date();
+    desde.setDate(hasta.getDate() - diasAtras);
+    desde.setUTCHours(0, 0, 0, 0);
+    hasta.setUTCHours(23, 59, 59, 0);
+
+    const formatear = (fecha) =>
+        fecha.toISOString().replace(/\.\d{3}Z$/, "Z");
+
+    return {
+        publicado_desde: formatear(desde),
+        publicado_hasta: formatear(hasta),
+    };
 }
 
-function normalizarRespuestaCompraAgilBeta(json) {
-    return extraerListado(json, [
-        "items",
-        "data",
-        "results",
-        "ListadoComprasAgiles",
-        "Listado",
-    ]);
+function extraerListaCompraAgil(respuestaApi) {
+    const candidatos = [
+        respuestaApi?.payload?.items,
+        respuestaApi?.payload?.compras_agiles,
+        respuestaApi?.payload?.registros,
+        respuestaApi?.payload,
+        respuestaApi?.data,
+        respuestaApi?.items,
+    ];
+
+    for (const candidato of candidatos) {
+        if (Array.isArray(candidato)) return candidato;
+    }
+
+    return [];
 }
 
 export async function getComprasAgiles({
     estado = "",
     region = "",
     textoBusqueda = "",
-    pagina = 1,
-    tamanoPagina = 50,
+    diasAtras = 7,
 } = {}) {
+    const rango = obtenerRangoPublicacion(diasAtras);
+    const fechaUsada = rango.publicado_hasta;
+
     try {
-        const json = await fetchCompraAgilBeta({
-            fecha: getFechaHoy(),
-            estado,
-            region,
-            q: textoBusqueda,
-            page: pagina,
-            limit: tamanoPagina,
+        const respuestaApi = await fetchCompraAgil("/v2/compra-agil", {
+            parametros: {
+                ...rango,
+                estado,
+                region,
+                q: textoBusqueda,
+                numero_pagina: 1,
+                tamano_pagina: TAMANO_PAGINA_API,
+                ordenar_por: "FechaPublicacion",
+            },
         });
 
-        const lista = normalizarRespuestaCompraAgilBeta(json);
-        const filas = lista.map(mapCompraAgil);
-
-        const totalRegistros =
-            json?.total ??
-            json?.totalRegistros ??
-            json?.pagination?.total ??
-            filas.length;
+        const lista = extraerListaCompraAgil(respuestaApi);
+        const filas = lista.map(mapCompraAgil).filter((f) => f?.codigo);
 
         const paginacion =
-            json?.totalPages ??
-            json?.pagination?.totalPages ??
-            Math.max(1, Math.ceil(totalRegistros / tamanoPagina));
+            respuestaApi?.payload?.paginacion ??
+            respuestaApi?.paginacion ??
+            null;
+
+        const totalRegistros =
+            paginacion?.total_registros ??
+            paginacion?.total ??
+            filas.length;
+
+        if (filas.length > 0) {
+            try {
+                await upsertFilasMercadoPublico("compra-agil", filas);
+            } catch (upsertError) {
+                console.warn(
+                    "[compra-agil] No se pudo guardar en Supabase:",
+                    upsertError.message
+                );
+            }
+        }
 
         return {
             filas,
+            todasLasFilas: filas,
             totalRegistros,
-            paginaActual: pagina,
-            tamanoPagina,
-            paginacion,
-            fechaUsada: getFechaHoy(),
-            desdeCache: false,
-            fuente: "compra-agil-beta",
+            fechaUsada,
+            desdeDb: false,
+            fuente: "api2-compra-agil",
         };
     } catch (error) {
-        console.warn("Compra Ágil Beta no disponible:", error.message);
+        console.warn("[compra-agil] API falló, leyendo Supabase:", error.message);
+
+        const { filas, totalRegistros } = await listarFilasMercadoPublico(
+            "compra-agil",
+            { limite: 50000 }
+        );
 
         return {
-            filas: [],
-            totalRegistros: 0,
-            paginaActual: pagina,
-            tamanoPagina,
-            paginacion: 1,
-            fechaUsada: getFechaHoy(),
-            desdeCache: false,
-            fuente: "compra-agil-beta",
-            error: "Compra Ágil Beta no disponible",
+            filas,
+            todasLasFilas: filas,
+            totalRegistros,
+            fechaUsada,
+            desdeDb: filas.length > 0,
+            fuente: "supabase",
+            error: filas.length === 0 ? error.message : null,
         };
     }
 }

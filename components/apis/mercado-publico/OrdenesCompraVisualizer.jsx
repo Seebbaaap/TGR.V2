@@ -5,6 +5,8 @@ import MpSubnav from "./MpSubnav";
 import MercadoPublicoTable from "./MercadoPublicoTable";
 import SkeletonTabla from "@/components/shared/SkeletonTabla";
 import { useMercadoPublico } from "./useMercadoPublico";
+import AvisoDesdeDb from "./AvisoDesdeDb";
+
 
 function formatMoney(value) {
     const amount = Number(value || 0);
@@ -60,7 +62,7 @@ function EstadoBadge({ estado }) {
 }
 
 export default function OrdenesCompraVisualizer() {
-    const { data, loading, error, fecha, total } = useMercadoPublico("ordenes-compra");
+    const { data, loading, error, fecha, total, desdeDb } = useMercadoPublico("ordenes-compra");
     const [busqueda, setBusqueda] = useState("");
     const [estadoFiltro, setEstadoFiltro] = useState("");
 
@@ -232,7 +234,12 @@ export default function OrdenesCompraVisualizer() {
                     </div>
                 ))}
             </div>
-
+            <AvisoDesdeDb
+                visible={desdeDb}
+                hayFilas={data.length > 0}
+                fecha={fecha}
+                modulo="órdenes de compra"
+            />
             {error && (
                 <div
                     style={{

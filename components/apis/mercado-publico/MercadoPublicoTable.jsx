@@ -6,7 +6,7 @@ export default function MercadoPublicoTable({
     columns = [],
     rows = [],
     emptyMessage = "No hay datos disponibles.",
-    paginaTamano = 50,
+    paginaTamano = 5,
     labelPlural = "registros",
 }) {
     const [pagina, setPagina] = useState(1);

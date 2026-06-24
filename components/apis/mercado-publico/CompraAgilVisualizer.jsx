@@ -5,6 +5,8 @@ import MpSubnav from "./MpSubnav";
 import MercadoPublicoTable from "./MercadoPublicoTable";
 import SkeletonTabla from "@/components/shared/SkeletonTabla";
 import { useMercadoPublico } from "./useMercadoPublico";
+import AvisoDesdeDb from "./AvisoDesdeDb";
+
 
 function formatMoney(value) {
     const amount = Number(value || 0);
@@ -62,8 +64,7 @@ function EstadoBadge({ estado }) {
 }
 
 export default function CompraAgilVisualizer() {
-    const { data, loading, error, fecha, total } = useMercadoPublico("compra-agil");
-
+    const { data, loading, error, fecha, total, desdeDb } = useMercadoPublico("compra-agil");
     const [busqueda, setBusqueda] = useState("");
     const [estadoFiltro, setEstadoFiltro] = useState("");
     const [regionFiltro, setRegionFiltro] = useState("");
@@ -269,7 +270,12 @@ export default function CompraAgilVisualizer() {
                     </div>
                 ))}
             </div>
-
+            <AvisoDesdeDb
+                visible={desdeDb}
+                hayFilas={data.length > 0}
+                fecha={fecha}
+                modulo="compras ágiles"
+            />
             {error && (
                 <div
                     style={{
