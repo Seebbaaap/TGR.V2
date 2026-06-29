@@ -1,39 +1,36 @@
-import { getLicitaciones } from "@/services/mercado-publico/licitacionesService";
-import { getOrdenesCompra } from "@/services/mercado-publico/ordenesCompraService";
-import { getComprasAgiles } from "@/services/mercado-publico/compraAgilService";
+import {
+    sincronizarLicitacionesDesdeApi,
+    sincronizarOrdenesCompraDesdeApi,
+    sincronizarComprasAgilesDesdeApi,
+} from "@/services/mercado-publico/sincronizarDesdeApi";
 
-async function sincronizarModulo(modulo, obtenerFilas) {
-    const resultado = await obtenerFilas();
-    const todasLasFilas = resultado.todasLasFilas ?? resultado.filas ?? [];
-
-    return {
-        modulo,
-        insertadas: todasLasFilas.length,
-        total: todasLasFilas.length,
-        desdeDb: resultado.desdeDb ?? false,
-    };
+async function sincronizarModuloSeguro(nombre, fn) {
+    try {
+        return await fn();
+    } catch (error) {
+        console.warn(`[sync] ${nombre} falló:`, error.message);
+        return {
+            modulo: nombre,
+            insertadas: 0,
+            total: 0,
+            error: error.message,
+        };
+    }
 }
 
 export async function syncMercadoPublico() {
-    const resultados = [];
+    const resultados = await Promise.all([
+        sincronizarModuloSeguro("licitaciones", sincronizarLicitacionesDesdeApi),
+        sincronizarModuloSeguro("ordenes-compra", sincronizarOrdenesCompraDesdeApi),
+        sincronizarModuloSeguro("compra-agil", sincronizarComprasAgilesDesdeApi),
+    ]);
 
-    resultados.push(
-        await sincronizarModulo("licitaciones", () =>
-            getLicitaciones({ tamanoPagina: 500 })
-        )
-    );
+    const huboError = resultados.some((r) => r.error);
 
-    resultados.push(
-        await sincronizarModulo("ordenes-compra", () =>
-            getOrdenesCompra({ tamanoPagina: 500 })
-        )
-    );
-
-    resultados.push(
-        await sincronizarModulo("compra-agil", () =>
-            getComprasAgiles({ tamanoPagina: 50 })
-        )
-    );
-
-    return { sincronizados: resultados };
+    return {
+        sincronizados: resultados,
+        ...(huboError && {
+            error: "Al menos un módulo no pudo sincronizarse",
+        }),
+    };
 }

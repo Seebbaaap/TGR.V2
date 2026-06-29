@@ -1,6 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import {
+    MP_SYNC_READY_EVENT,
+    yaSeSincronizoEnSesion,
+} from "@/lib/mercadoPublicoSession";
 
 function normalizarRespuesta(json) {
     const filas =
@@ -8,28 +12,17 @@ function normalizarRespuesta(json) {
             ? json.todasLasFilas
             : Array.isArray(json?.filas)
               ? json.filas
-              : Array.isArray(json?.data)
-                ? json.data
-                : [];
+              : [];
 
-    const total = Number(
-        json?.totalRegistros ?? json?.total ?? filas.length ?? 0
-    );
-
-    const fecha = json?.fecha ?? json?.fechaUsada ?? null;
-    const desdeDb = Boolean(json?.desdeDb ?? json?.desdeCache);
+    const total = Number(json?.totalRegistros ?? filas.length ?? 0);
 
     let error = null;
 
     if (json?.error) {
         error = json.error;
-    } else if (json?.ok === false) {
-        error = json?.mensaje || "Sin datos disponibles.";
-    } else if (filas.length === 0 && json?.success === false) {
-        error = json?.error || "No se pudieron cargar los datos.";
     }
 
-    return { filas, total, fecha, error, desdeDb };
+    return { filas, total, error };
 }
 
 export function useMercadoPublico(modulo) {
@@ -37,81 +30,93 @@ export function useMercadoPublico(modulo) {
         data: [],
         loading: true,
         error: null,
-        fecha: null,
         total: 0,
-        desdeDb: false,
+        sincronizando: !yaSeSincronizoEnSesion(),
     });
+
+    const cargarDesdeDb = useCallback(async () => {
+        if (!modulo) return;
+
+        try {
+            setState((prev) => ({
+                ...prev,
+                loading: true,
+                error: null,
+                sincronizando: false,
+            }));
+
+            const res = await fetch(`/api/mercado-publico/${modulo}`, {
+                method: "GET",
+                cache: "no-store",
+            });
+
+            const json = await res.json();
+
+            if (!res.ok) {
+                setState({
+                    data: [],
+                    loading: false,
+                    error: json?.error || "No se pudieron cargar los datos.",
+                    total: 0,
+                    sincronizando: false,
+                });
+                return;
+            }
+
+            const { filas, total, error } = normalizarRespuesta(json);
+
+            setState({
+                data: filas,
+                loading: false,
+                error,
+                total,
+                sincronizando: false,
+            });
+        } catch (error) {
+            setState({
+                data: [],
+                loading: false,
+                error: error?.message || "Error inesperado al leer Supabase.",
+                total: 0,
+                sincronizando: false,
+            });
+        }
+    }, [modulo]);
 
     useEffect(() => {
         if (!modulo) return;
 
-        let cancelado = false;
-
-        async function cargar() {
-            try {
+        function onSyncReady(event) {
+            if (event?.detail?.ok === false) {
                 setState((prev) => ({
                     ...prev,
-                    loading: true,
-                    error: null,
-                }));
-
-                const res = await fetch(`/api/mercado-publico/${modulo}`, {
-                    method: "GET",
-                    cache: "no-store",
-                });
-
-                const json = await res.json();
-
-                if (cancelado) return;
-
-                if (!res.ok) {
-                    setState({
-                        data: [],
-                        loading: false,
-                        error:
-                            json?.error ||
-                            json?.mensaje ||
-                            "No se pudieron cargar los datos.",
-                        fecha: json?.fecha ?? json?.fechaUsada ?? null,
-                        total: 0,
-                        desdeDb: false,
-                    });
-                    return;
-                }
-
-                const { filas, total, fecha, error, desdeDb } =
-                    normalizarRespuesta(json);
-
-                setState({
-                    data: filas,
                     loading: false,
-                    error,
-                    fecha,
-                    total,
-                    desdeDb,
-                });
-            } catch (error) {
-                if (cancelado) return;
-
-                setState({
-                    data: [],
-                    loading: false,
+                    sincronizando: false,
                     error:
-                        error?.message ||
-                        "Error inesperado al consultar Mercado Público.",
-                    fecha: null,
-                    total: 0,
-                    desdeDb: false,
-                });
+                        event.detail.error ||
+                        "No se pudo sincronizar Mercado Público.",
+                }));
+                return;
             }
+
+            cargarDesdeDb();
         }
 
-        cargar();
+        if (yaSeSincronizoEnSesion()) {
+            cargarDesdeDb();
+        } else {
+            setState((prev) => ({
+                ...prev,
+                loading: true,
+                sincronizando: true,
+            }));
+            window.addEventListener(MP_SYNC_READY_EVENT, onSyncReady);
+        }
 
         return () => {
-            cancelado = true;
+            window.removeEventListener(MP_SYNC_READY_EVENT, onSyncReady);
         };
-    }, [modulo]);
+    }, [modulo, cargarDesdeDb]);
 
     return state;
 }

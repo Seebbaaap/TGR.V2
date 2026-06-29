@@ -1,15 +1,9 @@
 import { NextResponse } from "next/server";
 import { getLicitaciones } from "@/services/mercado-publico/licitacionesService";
 
-export async function GET(request) {
+export async function GET() {
     try {
-        const { searchParams } = new URL(request.url);
-
-        const resultado = await getLicitaciones({
-            estado: searchParams.get("estado") || "",
-            textoBusqueda: searchParams.get("q") || "",
-        });
-
+        const resultado = await getLicitaciones();
         return NextResponse.json(resultado);
     } catch (error) {
         return NextResponse.json(

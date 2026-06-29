@@ -1,41 +1,28 @@
 "use client";
 
-function formatearFecha(fecha) {
-    if (!fecha) return "";
-    if (/^\d{8}$/.test(fecha)) {
-        return `${fecha.slice(0, 2)}-${fecha.slice(2, 4)}-${fecha.slice(4)}`;
-    }
-    const d = new Date(fecha);
-    if (!Number.isNaN(d.getTime())) {
-        return d.toLocaleDateString("es-CL");
-    }
-    return fecha;
-}
-
 export default function AvisoDesdeDb({
-    visible = false,
+    visible = true,
+    sincronizando = false,
     hayFilas = false,
-    fecha = "",
-    modulo = "registros",
 }) {
-    if (!visible || !hayFilas) return null;
-
-    const fechaLegible = formatearFecha(fecha);
+    if (!visible) return null;
 
     return (
         <div
             style={{
                 padding: "0.75rem 1rem",
                 borderRadius: "0.75rem",
-                border: "1px solid #fbbf24",
-                background: "rgba(251,191,36,0.1)",
-                color: "#fbbf24",
+                border: "1px solid #38bdf8",
+                background: "rgba(56,189,248,0.1)",
+                color: "#38bdf8",
                 fontSize: "0.82rem",
             }}
         >
-            Mostrando {modulo} guardados en Supabase
-            {fechaLegible ? ` (última consulta: ${fechaLegible})` : ""}.
-            La API de Mercado Público no respondió en esta visita.
+            {sincronizando
+                ? "Sincronizando con Mercado Público y actualizando Supabase..."
+                : hayFilas
+                  ? "Datos servidos desde Supabase (sincronizados al abrir la aplicación)."
+                  : "Sin registros en Supabase. Si acabas de abrir la app, espera a que termine la sincronización."}
         </div>
     );
 }

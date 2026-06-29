@@ -64,7 +64,7 @@ function EstadoBadge({ estado }) {
 }
 
 export default function CompraAgilVisualizer() {
-    const { data, loading, error, fecha, total, desdeDb } = useMercadoPublico("compra-agil");
+    const { data, loading, error, total, sincronizando } = useMercadoPublico("compra-agil");
     const [busqueda, setBusqueda] = useState("");
     const [estadoFiltro, setEstadoFiltro] = useState("");
     const [regionFiltro, setRegionFiltro] = useState("");
@@ -235,7 +235,7 @@ export default function CompraAgilVisualizer() {
                         maxWidth: "60ch",
                     }}
                 >
-                    Visualización de registros obtenidos desde la API de Mercado Público.
+                    Compras ágiles sincronizadas desde Mercado Público y servidas desde Supabase.
                 </p>
             </div>
 
@@ -271,10 +271,9 @@ export default function CompraAgilVisualizer() {
                 ))}
             </div>
             <AvisoDesdeDb
-                visible={desdeDb}
+                visible
+                sincronizando={sincronizando}
                 hayFilas={data.length > 0}
-                fecha={fecha}
-                modulo="compras ágiles"
             />
             {error && (
                 <div
@@ -407,7 +406,7 @@ export default function CompraAgilVisualizer() {
                     <p style={{ margin: 0, fontSize: "0.84rem" }}>
                         {busqueda || estadoFiltro || regionFiltro
                             ? "No hay registros que coincidan con los filtros aplicados."
-                            : "La API no devolvió datos para la fecha actual o el ticket no está configurado."}
+                            : "No hay compras ágiles en Supabase. Espera a que termine la sincronización."}
                     </p>
                 </div>
             ) : (
@@ -419,11 +418,6 @@ export default function CompraAgilVisualizer() {
                 />
             )}
 
-            {fecha && (
-                <p style={{ textAlign: "right", fontSize: "0.74rem", color: "var(--text-muted)", margin: 0 }}>
-                    Fecha consultada: {fecha}
-                </p>
-            )}
         </section>
     );
 }

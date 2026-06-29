@@ -1,5 +1,6 @@
 import "./globals.css";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
+import MercadoPublicoBootstrap from "@/components/apis/mercado-publico/MercadoPublicoBootstrap";
 
 export const metadata = {
   title: "EstadoHUB — APIs Públicas Chile",
@@ -10,7 +11,10 @@ export default function RootLayout({ children }) {
   return (
     <html lang="es" data-theme="dark" suppressHydrationWarning>
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <MercadoPublicoBootstrap />
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

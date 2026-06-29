@@ -62,7 +62,7 @@ function EstadoBadge({ estado }) {
 }
 
 export default function LicitacionesVisualizer() {
-    const { data, loading, error, fecha, total, desdeDb } = useMercadoPublico("licitaciones");
+    const { data, loading, error, total, sincronizando } = useMercadoPublico("licitaciones");
 
     const [busqueda, setBusqueda] = useState("");
     const [estadoFiltro, setEstadoFiltro] = useState("");
@@ -190,7 +190,7 @@ export default function LicitacionesVisualizer() {
                     Licitaciones
                 </h1>
                 <p style={{ margin: 0, marginTop: "0.45rem", color: "var(--text-muted)", fontSize: "0.92rem", maxWidth: "60ch" }}>
-                    Consulta de licitaciones publicadas desde la API de Mercado Público.
+                    Licitaciones sincronizadas desde Mercado Público y servidas desde Supabase.
                 </p>
             </div>
 
@@ -224,15 +224,14 @@ export default function LicitacionesVisualizer() {
                     </div>
                 ))}
             </div>
-            <AvisoDesdeDb           
-                visible={desdeDb}
+            <AvisoDesdeDb
+                visible
+                sincronizando={sincronizando}
                 hayFilas={data.length > 0}
-                fecha={fecha}
-                modulo="licitaciones"
             />
             {error && (
                 <div
-                
+
                     style={{
                         padding: "0.75rem 1rem",
                         borderRadius: "0.75rem",
@@ -242,10 +241,10 @@ export default function LicitacionesVisualizer() {
                         fontSize: "0.82rem",
                     }}
                 >
-                    
+
                     {error}
                 </div>
-                
+
             )}
 
             {!loading && (
@@ -341,7 +340,7 @@ export default function LicitacionesVisualizer() {
                     <p style={{ margin: 0, fontSize: "0.84rem" }}>
                         {busqueda || estadoFiltro
                             ? "No hay registros que coincidan con los filtros aplicados."
-                            : "La API no devolvió licitaciones para la fecha consultada."}
+                            : "No hay licitaciones en Supabase. Espera a que termine la sincronización."}
                     </p>
                 </div>
             ) : (
@@ -353,11 +352,6 @@ export default function LicitacionesVisualizer() {
                 />
             )}
 
-            {fecha && (
-                <p style={{ textAlign: "right", fontSize: "0.74rem", color: "var(--text-muted)", margin: 0 }}>
-                    Fecha consultada: {fecha}
-                </p>
-            )}
         </section>
     );
 }

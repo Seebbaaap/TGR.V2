@@ -62,7 +62,7 @@ function EstadoBadge({ estado }) {
 }
 
 export default function OrdenesCompraVisualizer() {
-    const { data, loading, error, fecha, total, desdeDb } = useMercadoPublico("ordenes-compra");
+    const { data, loading, error, total, sincronizando } = useMercadoPublico("ordenes-compra");
     const [busqueda, setBusqueda] = useState("");
     const [estadoFiltro, setEstadoFiltro] = useState("");
 
@@ -200,7 +200,7 @@ export default function OrdenesCompraVisualizer() {
                     Órdenes de Compra
                 </h1>
                 <p style={{ margin: 0, marginTop: "0.45rem", color: "var(--text-muted)", fontSize: "0.92rem", maxWidth: "60ch" }}>
-                    Consulta de órdenes de compra emitidas desde la API de Mercado Público.
+                    Órdenes de compra sincronizadas desde Mercado Público y servidas desde Supabase.
                 </p>
             </div>
 
@@ -235,10 +235,9 @@ export default function OrdenesCompraVisualizer() {
                 ))}
             </div>
             <AvisoDesdeDb
-                visible={desdeDb}
+                visible
+                sincronizando={sincronizando}
                 hayFilas={data.length > 0}
-                fecha={fecha}
-                modulo="órdenes de compra"
             />
             {error && (
                 <div
@@ -348,7 +347,7 @@ export default function OrdenesCompraVisualizer() {
                     <p style={{ margin: 0, fontSize: "0.84rem" }}>
                         {busqueda || estadoFiltro
                             ? "No hay registros que coincidan con los filtros aplicados."
-                            : "La API no devolvió órdenes de compra para la fecha consultada."}
+                            : "No hay órdenes de compra en Supabase. Espera a que termine la sincronización."}
                     </p>
                 </div>
             ) : (
@@ -360,11 +359,6 @@ export default function OrdenesCompraVisualizer() {
                 />
             )}
 
-            {fecha && (
-                <p style={{ textAlign: "right", fontSize: "0.74rem", color: "var(--text-muted)", margin: 0 }}>
-                    Fecha consultada: {fecha}
-                </p>
-            )}
         </section>
     );
 }

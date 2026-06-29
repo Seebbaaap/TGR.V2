@@ -1,14 +1,9 @@
 import { NextResponse } from "next/server";
 import { getOrdenesCompra } from "@/services/mercado-publico/ordenesCompraService";
 
-export async function GET(request) {
+export async function GET() {
     try {
-        const { searchParams } = new URL(request.url);
-
-        const resultado = await getOrdenesCompra({
-            codigo: searchParams.get("codigo") || "",
-        });
-
+        const resultado = await getOrdenesCompra();
         return NextResponse.json(resultado);
     } catch (error) {
         return NextResponse.json(
