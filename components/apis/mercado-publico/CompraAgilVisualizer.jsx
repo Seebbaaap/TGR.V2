@@ -6,6 +6,7 @@ import MercadoPublicoTable from "./MercadoPublicoTable";
 import SkeletonTabla from "@/components/shared/SkeletonTabla";
 import { useMercadoPublico } from "./useMercadoPublico";
 import AvisoDesdeDb from "./AvisoDesdeDb";
+import MercadoPublicoDetalleModal from "./MercadoPublicoDetalleModal";
 
 
 function formatMoney(value) {
@@ -68,24 +69,35 @@ export default function CompraAgilVisualizer() {
     const [busqueda, setBusqueda] = useState("");
     const [estadoFiltro, setEstadoFiltro] = useState("");
     const [regionFiltro, setRegionFiltro] = useState("");
+    const [detalleAbierto, setDetalleAbierto] = useState(null);
+    const [parches, setParches] = useState({});
+
+    const dataActualizada = useMemo(
+        () => data.map((r) => (parches[r.codigo] ? { ...r, ...parches[r.codigo] } : r)),
+        [data, parches]
+    );
+
+    function onDetalleCargado(fila) {
+        setParches((prev) => ({ ...prev, [fila.codigo]: fila }));
+    }
 
     const estados = useMemo(() => {
-        const values = data.map((d) => d.Estado ?? d.estado).filter(Boolean);
+        const values = dataActualizada.map((d) => d.estado).filter(Boolean);
         return [...new Set(values)].sort();
-    }, [data]);
+    }, [dataActualizada]);
 
     const regiones = useMemo(() => {
-        const values = data.map((d) => d.Region ?? d.region).filter(Boolean);
+        const values = dataActualizada.map((d) => d.region).filter(Boolean);
         return [...new Set(values)].sort();
-    }, [data]);
+    }, [dataActualizada]);
 
     const filas = useMemo(() => {
-        return data.filter((row) => {
-            const nombre = row.Nombre ?? row.nombre ?? "";
-            const codigo = row.CodigoExterno ?? row.codigo ?? "";
-            const organismo = row.NombreOrganismo ?? row.organismo ?? "";
-            const estado = row.Estado ?? row.estado ?? "";
-            const region = row.Region ?? row.region ?? "";
+        return dataActualizada.filter((row) => {
+            const nombre = row.nombre ?? "";
+            const codigo = row.codigo ?? "";
+            const organismo = row.organismo ?? "";
+            const estado = row.estado ?? "";
+            const region = row.region ?? "";
 
             const q = busqueda.toLowerCase();
             const textMatch =
@@ -99,7 +111,7 @@ export default function CompraAgilVisualizer() {
 
             return textMatch && estadoMatch && regionMatch;
         });
-    }, [data, busqueda, estadoFiltro, regionFiltro]);
+    }, [dataActualizada, busqueda, estadoFiltro, regionFiltro]);
 
     const columns = [
         {
@@ -107,7 +119,7 @@ export default function CompraAgilVisualizer() {
             label: "Código",
             render: (row) => (
                 <span style={{ color: "var(--text-muted)", fontSize: "0.75rem", fontFamily: "monospace" }}>
-                    {row.CodigoExterno ?? row.codigo ?? "—"}
+                    {row.codigo ?? "—"}
                 </span>
             ),
         },
@@ -115,7 +127,7 @@ export default function CompraAgilVisualizer() {
             key: "nombre",
             label: "Nombre",
             render: (row) => {
-                const nombre = row.Nombre ?? row.nombre ?? "—";
+                const nombre = row.nombre ?? "—";
                 return (
                     <span
                         style={{
@@ -138,7 +150,7 @@ export default function CompraAgilVisualizer() {
             key: "organismo",
             label: "Organismo",
             render: (row) => {
-                const organismo = row.NombreOrganismo ?? row.organismo ?? "—";
+                const organismo = row.organismo ?? "—";
                 return (
                     <span
                         style={{
@@ -160,14 +172,14 @@ export default function CompraAgilVisualizer() {
         {
             key: "estado",
             label: "Estado",
-            render: (row) => <EstadoBadge estado={row.Estado ?? row.estado} />,
+            render: (row) => <EstadoBadge estado={row.estado} />,
         },
         {
             key: "region",
             label: "Región",
             render: (row) => (
                 <span style={{ color: "var(--text-muted)", fontSize: "0.78rem" }}>
-                    {row.Region ?? row.region ?? "—"}
+                    {row.region ?? "—"}
                 </span>
             ),
         },
@@ -176,7 +188,7 @@ export default function CompraAgilVisualizer() {
             label: "Cierre",
             render: (row) => (
                 <span style={{ color: "var(--text-muted)", fontSize: "0.78rem", whiteSpace: "nowrap" }}>
-                    {formatFecha(row.FechaCierre ?? row.fechaCierre)}
+                    {formatFecha(row.fechaCierre)}
                 </span>
             ),
         },
@@ -185,7 +197,7 @@ export default function CompraAgilVisualizer() {
             label: "Monto",
             render: (row) => (
                 <span style={{ color: "var(--accent)", fontWeight: 600, fontFamily: "monospace" }}>
-                    {formatMoney(row.MontoEstimado ?? row.monto)}
+                    {formatMoney(row.monto)}
                 </span>
             ),
         },
@@ -247,7 +259,7 @@ export default function CompraAgilVisualizer() {
                 }}
             >
                 {[
-                    { label: "Registros", value: total ?? data.length ?? 0 },
+                    { label: "Registros", value: total ?? dataActualizada.length ?? 0 },
                     { label: "Filtrados", value: filas.length },
                     { label: "Estados", value: estados.length },
                     { label: "Regiones", value: regiones.length },
@@ -413,11 +425,20 @@ export default function CompraAgilVisualizer() {
                 <MercadoPublicoTable
                     columns={columns}
                     rows={filas}
+                    onVerDetalle={setDetalleAbierto}
                     emptyMessage="Sin registros disponibles."
                     labelPlural="compras ágiles"
                 />
             )}
 
+            {detalleAbierto && (
+                <MercadoPublicoDetalleModal
+                    row={parches[detalleAbierto.codigo] ?? detalleAbierto}
+                    modulo="compra-agil"
+                    onClose={() => setDetalleAbierto(null)}
+                    onDetalleCargado={onDetalleCargado}
+                />
+            )}
         </section>
     );
 }

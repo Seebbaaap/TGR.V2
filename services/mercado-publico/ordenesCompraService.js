@@ -8,7 +8,6 @@ export async function getOrdenesCompra({ limite = 50000 } = {}) {
 
     return {
         filas,
-        todasLasFilas: filas,
         totalRegistros,
     };
 }

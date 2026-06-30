@@ -8,7 +8,6 @@ export async function getComprasAgiles({ limite = 50000 } = {}) {
 
     return {
         filas,
-        todasLasFilas: filas,
         totalRegistros,
     };
 }

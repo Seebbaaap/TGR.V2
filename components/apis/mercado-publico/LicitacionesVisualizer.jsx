@@ -6,6 +6,8 @@ import MercadoPublicoTable from "./MercadoPublicoTable";
 import SkeletonTabla from "@/components/shared/SkeletonTabla";
 import { useMercadoPublico } from "./useMercadoPublico";
 import AvisoDesdeDb from "./AvisoDesdeDb";
+import MercadoPublicoDetalleModal from "./MercadoPublicoDetalleModal";
+
 
 
 function formatFecha(valor) {
@@ -24,6 +26,16 @@ function formatFecha(valor) {
             minute: "2-digit",
         })
     );
+}
+
+function formatMoney(value) {
+    const amount = Number(value || 0);
+    if (!amount) return "—";
+    return new Intl.NumberFormat("es-CL", {
+        style: "currency",
+        currency: "CLP",
+        maximumFractionDigits: 0,
+    }).format(amount);
 }
 
 const BADGE_ESTILOS = {
@@ -66,17 +78,28 @@ export default function LicitacionesVisualizer() {
 
     const [busqueda, setBusqueda] = useState("");
     const [estadoFiltro, setEstadoFiltro] = useState("");
+    const [detalleAbierto, setDetalleAbierto] = useState(null);
+    const [parches, setParches] = useState({});
+
+    const dataActualizada = useMemo(
+        () => data.map((r) => (parches[r.codigo] ? { ...r, ...parches[r.codigo] } : r)),
+        [data, parches]
+    );
+
+    function onDetalleCargado(fila) {
+        setParches((prev) => ({ ...prev, [fila.codigo]: fila }));
+    }
 
     const estados = useMemo(() => {
-        const values = data.map((d) => d.Estado ?? d.estado).filter(Boolean);
+        const values = dataActualizada.map((d) => d.estado).filter(Boolean);
         return [...new Set(values)].sort();
-    }, [data]);
+    }, [dataActualizada]);
 
     const filas = useMemo(() => {
-        return data.filter((row) => {
-            const nombre = row.Nombre ?? row.nombre ?? "";
-            const codigo = row.CodigoExterno ?? row.codigo ?? "";
-            const estado = row.Estado ?? row.estado ?? "";
+        return dataActualizada.filter((row) => {
+            const nombre = row.nombre ?? "";
+            const codigo = row.codigo ?? "";
+            const estado = row.estado ?? "";
 
             const q = busqueda.toLowerCase();
             const textMatch =
@@ -87,7 +110,7 @@ export default function LicitacionesVisualizer() {
             const estadoMatch = !estadoFiltro || estado === estadoFiltro;
             return textMatch && estadoMatch;
         });
-    }, [data, busqueda, estadoFiltro]);
+    }, [dataActualizada, busqueda, estadoFiltro]);
 
     const columns = [
         {
@@ -95,7 +118,7 @@ export default function LicitacionesVisualizer() {
             label: "Código",
             render: (row) => (
                 <span style={{ color: "var(--text-muted)", fontSize: "0.75rem", fontFamily: "monospace" }}>
-                    {row.CodigoExterno ?? row.codigo ?? "—"}
+                    {row.codigo ?? "—"}
                 </span>
             ),
         },
@@ -103,7 +126,7 @@ export default function LicitacionesVisualizer() {
             key: "nombre",
             label: "Título",
             render: (row) => {
-                const nombre = row.Nombre ?? row.nombre ?? "—";
+                const nombre = row.nombre ?? "—";
                 return (
                     <span
                         style={{
@@ -125,13 +148,13 @@ export default function LicitacionesVisualizer() {
         {
             key: "estado",
             label: "Estado",
-            render: (row) => <EstadoBadge estado={row.Estado ?? row.estado} />,
+            render: (row) => <EstadoBadge estado={row.estado} />,
         },
         {
             key: "organismo",
             label: "Organismo",
             render: (row) => {
-                const organismo = row.NombreOrganismo ?? row.organismo ?? "—";
+                const organismo = row.organismo ?? "—";
                 return (
                     <span
                         style={{
@@ -151,11 +174,20 @@ export default function LicitacionesVisualizer() {
             },
         },
         {
+            key: "montoEstimado",
+            label: "Monto est.",
+            render: (row) => (
+                <span style={{ color: "var(--accent)", fontWeight: 600, fontFamily: "monospace", whiteSpace: "nowrap" }}>
+                    {formatMoney(row.montoEstimado)}
+                </span>
+            ),
+        },
+        {
             key: "fechaCierre",
             label: "Fecha cierre",
             render: (row) => (
                 <span style={{ color: "var(--text-muted)", fontSize: "0.78rem", whiteSpace: "nowrap" }}>
-                    {formatFecha(row.FechaCierre ?? row.fechaCierre)}
+                    {formatFecha(row.fechaCierre)}
                 </span>
             ),
         },
@@ -202,7 +234,7 @@ export default function LicitacionesVisualizer() {
                 }}
             >
                 {[
-                    { label: "Registros", value: total ?? data.length ?? 0 },
+                    { label: "Registros", value: total ?? dataActualizada.length ?? 0 },
                     { label: "Filtrados", value: filas.length },
                     { label: "Estados", value: estados.length },
                 ].map((item) => (
@@ -347,11 +379,21 @@ export default function LicitacionesVisualizer() {
                 <MercadoPublicoTable
                     columns={columns}
                     rows={filas}
+                    onVerDetalle={setDetalleAbierto}
                     emptyMessage="Sin licitaciones disponibles."
                     labelPlural="licitaciones"
                 />
             )}
 
+            {detalleAbierto && (
+                <MercadoPublicoDetalleModal
+                    row={parches[detalleAbierto.codigo] ?? detalleAbierto}
+                    modulo="licitaciones"
+                    onClose={() => setDetalleAbierto(null)}
+                    onDetalleCargado={onDetalleCargado}
+                />
+            )}
         </section>
     );
 }
+

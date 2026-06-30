@@ -82,4 +82,17 @@ export async function listarFilasMercadoPublico(modulo, { limite = 50000 } = {})
         filas: (data ?? []).map(dbAUi),
         totalRegistros: count ?? data?.length ?? 0,
     };
+
+}
+
+export async function obtenerFilaPorCodigo(modulo, codigo) {
+    const { tabla, dbAUi } = getConfig(modulo);
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+        .from(tabla)
+        .select("*")
+        .eq("codigo", codigo)
+        .maybeSingle();
+    if (error) throw error;
+    return data ? dbAUi(data) : null;
 }

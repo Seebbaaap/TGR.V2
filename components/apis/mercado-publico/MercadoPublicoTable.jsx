@@ -8,20 +8,34 @@ export default function MercadoPublicoTable({
     emptyMessage = "No hay datos disponibles.",
     paginaTamano = 5,
     labelPlural = "registros",
+    onVerDetalle,
 }) {
     const [pagina, setPagina] = useState(1);
     const totalPaginas = Math.max(1, Math.ceil(rows.length / paginaTamano));
     const inicio = (pagina - 1) * paginaTamano;
     const visibles = rows.slice(inicio, inicio + paginaTamano);
 
+    const estiloVer = {
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "0.25rem",
+        padding: "0.3rem 0.75rem",
+        borderRadius: "0.4rem",
+        border: "1px solid var(--accent)",
+        color: "var(--accent)",
+        fontSize: "0.75rem",
+        fontWeight: 600,
+        background: "transparent",
+        cursor: "pointer",
+        textDecoration: "none",
+    };
+
     return (
         <div>
-            {/* Contador */}
             <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: "0.5rem" }}>
                 {rows.length} {labelPlural} · Página {pagina} de {totalPaginas}
             </p>
 
-            {/* Tabla */}
             <div style={{
                 borderRadius: "0.75rem",
                 border: "1px solid var(--border)",
@@ -74,7 +88,7 @@ export default function MercadoPublicoTable({
                                 </tr>
                             ) : (
                                 visibles.map((row, index) => (
-                                    <tr key={row.id ?? index} style={{
+                                    <tr key={row.id ?? row.codigo ?? index} style={{
                                         borderTop: "1px solid var(--border)",
                                         background: index % 2 === 0 ? "transparent" : "color-mix(in srgb, var(--surface-2) 40%, transparent)",
                                     }}>
@@ -87,30 +101,15 @@ export default function MercadoPublicoTable({
                                                 {col.render ? col.render(row) : (row[col.key] ?? "—")}
                                             </td>
                                         ))}
-                                        {/* Botón Ver */}
                                         <td style={{ padding: "0.65rem 1rem", textAlign: "right" }}>
-                                            {row.url ? (
-                                                <a
-                                                    href={row.url}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    style={{
-                                                        display: "inline-flex",
-                                                        alignItems: "center",
-                                                        gap: "0.25rem",
-                                                        padding: "0.3rem 0.75rem",
-                                                        borderRadius: "0.4rem",
-                                                        border: "1px solid var(--accent)",
-                                                        color: "var(--accent)",
-                                                        fontSize: "0.75rem",
-                                                        fontWeight: 600,
-                                                        textDecoration: "none",
-                                                        background: "transparent",
-                                                        cursor: "pointer",
-                                                    }}
+                                            {onVerDetalle ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onVerDetalle(row)}
+                                                    style={estiloVer}
                                                 >
                                                     Ver ›
-                                                </a>
+                                                </button>
                                             ) : (
                                                 <span style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>—</span>
                                             )}
@@ -123,7 +122,6 @@ export default function MercadoPublicoTable({
                 </div>
             </div>
 
-            {/* Paginación */}
             {totalPaginas > 1 && (
                 <div style={{
                     display: "flex",

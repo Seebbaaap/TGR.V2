@@ -6,6 +6,7 @@ import MercadoPublicoTable from "./MercadoPublicoTable";
 import SkeletonTabla from "@/components/shared/SkeletonTabla";
 import { useMercadoPublico } from "./useMercadoPublico";
 import AvisoDesdeDb from "./AvisoDesdeDb";
+import MercadoPublicoDetalleModal from "./MercadoPublicoDetalleModal";
 
 
 function formatMoney(value) {
@@ -65,18 +66,29 @@ export default function OrdenesCompraVisualizer() {
     const { data, loading, error, total, sincronizando } = useMercadoPublico("ordenes-compra");
     const [busqueda, setBusqueda] = useState("");
     const [estadoFiltro, setEstadoFiltro] = useState("");
+    const [detalleAbierto, setDetalleAbierto] = useState(null);
+    const [parches, setParches] = useState({});
+
+    const dataActualizada = useMemo(
+        () => data.map((r) => (parches[r.codigo] ? { ...r, ...parches[r.codigo] } : r)),
+        [data, parches]
+    );
+
+    function onDetalleCargado(fila) {
+        setParches((prev) => ({ ...prev, [fila.codigo]: fila }));
+    }
 
     const estados = useMemo(() => {
-        const values = data.map((d) => d.Estado ?? d.estado).filter(Boolean);
+        const values = dataActualizada.map((d) => d.estado).filter(Boolean);
         return [...new Set(values)].sort();
-    }, [data]);
+    }, [dataActualizada]);
 
     const filas = useMemo(() => {
-        return data.filter((row) => {
-            const codigo = row.Codigo ?? row.codigo ?? "";
-            const proveedor = row.NombreProveedor ?? row.proveedor ?? "";
-            const comprador = row.NombreOrganismo ?? row.comprador ?? "";
-            const estado = row.Estado ?? row.estado ?? "";
+        return dataActualizada.filter((row) => {
+            const codigo = row.codigo ?? "";
+            const proveedor = row.proveedor ?? "";
+            const comprador = row.comprador ?? "";
+            const estado = row.estado ?? "";
 
             const q = busqueda.toLowerCase();
             const textMatch =
@@ -88,7 +100,7 @@ export default function OrdenesCompraVisualizer() {
             const estadoMatch = !estadoFiltro || estado === estadoFiltro;
             return textMatch && estadoMatch;
         });
-    }, [data, busqueda, estadoFiltro]);
+    }, [dataActualizada, busqueda, estadoFiltro]);
 
     const columns = [
         {
@@ -96,7 +108,7 @@ export default function OrdenesCompraVisualizer() {
             label: "Código",
             render: (row) => (
                 <span style={{ color: "var(--text-muted)", fontSize: "0.75rem", fontFamily: "monospace" }}>
-                    {row.Codigo ?? row.codigo ?? "—"}
+                    {row.codigo ?? "—"}
                 </span>
             ),
         },
@@ -104,7 +116,7 @@ export default function OrdenesCompraVisualizer() {
             key: "proveedor",
             label: "Proveedor",
             render: (row) => {
-                const proveedor = row.NombreProveedor ?? row.proveedor ?? "—";
+                const proveedor = row.proveedor ?? "—";
                 return (
                     <span
                         style={{
@@ -127,7 +139,7 @@ export default function OrdenesCompraVisualizer() {
             key: "comprador",
             label: "Comprador",
             render: (row) => {
-                const comprador = row.NombreOrganismo ?? row.comprador ?? "—";
+                const comprador = row.comprador ?? "—";
                 return (
                     <span
                         style={{
@@ -149,14 +161,14 @@ export default function OrdenesCompraVisualizer() {
         {
             key: "estado",
             label: "Estado",
-            render: (row) => <EstadoBadge estado={row.Estado ?? row.estado} />,
+            render: (row) => <EstadoBadge estado={row.estado} />,
         },
         {
             key: "montoTotal",
             label: "Monto total",
             render: (row) => (
                 <span style={{ color: "var(--accent)", fontWeight: 600, fontFamily: "monospace" }}>
-                    {formatMoney(row.MontoTotal ?? row.montoTotal)}
+                    {formatMoney(row.montoTotal)}
                 </span>
             ),
         },
@@ -165,7 +177,7 @@ export default function OrdenesCompraVisualizer() {
             label: "Fecha",
             render: (row) => (
                 <span style={{ color: "var(--text-muted)", fontSize: "0.78rem", whiteSpace: "nowrap" }}>
-                    {formatFecha(row.FechaEmision ?? row.fecha)}
+                    {formatFecha(row.fecha)}
                 </span>
             ),
         },
@@ -212,7 +224,7 @@ export default function OrdenesCompraVisualizer() {
                 }}
             >
                 {[
-                    { label: "Registros", value: total ?? data.length ?? 0 },
+                    { label: "Registros", value: total ?? dataActualizada.length ?? 0 },
                     { label: "Filtrados", value: filas.length },
                     { label: "Estados", value: estados.length },
                 ].map((item) => (
@@ -354,11 +366,20 @@ export default function OrdenesCompraVisualizer() {
                 <MercadoPublicoTable
                     columns={columns}
                     rows={filas}
+                    onVerDetalle={setDetalleAbierto}
                     emptyMessage="Sin órdenes de compra disponibles."
                     labelPlural="órdenes de compra"
                 />
             )}
 
+            {detalleAbierto && (
+                <MercadoPublicoDetalleModal
+                    row={parches[detalleAbierto.codigo] ?? detalleAbierto}
+                    modulo="ordenes-compra"
+                    onClose={() => setDetalleAbierto(null)}
+                    onDetalleCargado={onDetalleCargado}
+                />
+            )}
         </section>
     );
 }

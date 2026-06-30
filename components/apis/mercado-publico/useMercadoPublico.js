@@ -7,12 +7,7 @@ import {
 } from "@/lib/mercadoPublicoSession";
 
 function normalizarRespuesta(json) {
-    const filas =
-        Array.isArray(json?.todasLasFilas) && json.todasLasFilas.length > 0
-            ? json.todasLasFilas
-            : Array.isArray(json?.filas)
-              ? json.filas
-              : [];
+    const filas = Array.isArray(json?.filas) ? json.filas : [];
 
     const total = Number(json?.totalRegistros ?? filas.length ?? 0);
 
