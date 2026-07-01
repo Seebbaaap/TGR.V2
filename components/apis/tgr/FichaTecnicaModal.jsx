@@ -3,6 +3,7 @@
 import { X, Calendar, Building2, Scale, Clock, AlertCircle, Download } from "lucide-react";
 import { formatCLP } from "@/utils/formatCurrency";
 import { formatDate } from "@/utils/formatDate";
+import AnalisisAgua from "@/components/apis/tgr/AnalisisAgua";
 
 function Campo({ label, valor, accentColor }) {
     return (
@@ -585,6 +586,10 @@ export default function FichaTecnicaModal({ remate, onClose }) {
                             gap: "10px",
                         }}
                     >
+                        {/* Análisis agua subterránea */}
+                            {raw.rolFormato && (
+                                <AnalisisAgua rolFormato={raw.rolFormato} />
+                            )}
                         <AlertCircle size={16} style={{ color: "var(--warning)", flexShrink: 0, marginTop: "1px" }} />
                         <p style={{ color: "var(--warning)", fontSize: "0.8rem", lineHeight: 1.5 }}>
                             <strong>Condiciones de subasta no publicadas.</strong>{" "}
