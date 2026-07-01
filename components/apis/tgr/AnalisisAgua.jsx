@@ -150,7 +150,7 @@ export default function AnalisisAgua({ rolFormato }) {
                     : <XCircle size={13} style={{ color: "var(--danger)" }} />
                 }
                 <span style={{ fontSize: "0.78rem", color: score_agua.puede_perforar ? "var(--success)" : "var(--danger)", fontFamily: "monospace" }}>
-                    {score_agua.puede_perforar ? "Puede perforar pozo" : "Zona de prohibición DGA"}
+                    {score_agua.puede_perforar ? "No está en zona de prohibición DGA" : "Zona de prohibición DGA — no se puede perforar"}
                 </span>
             </div>
 
