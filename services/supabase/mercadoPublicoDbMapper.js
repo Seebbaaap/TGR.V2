@@ -51,6 +51,14 @@ export function licitacionDbAUi(row) {
     };
 }
 
+// Sin payload ni items: liviano para listar decenas de miles de filas.
+export const COLUMNAS_LISTADO_ORDEN_COMPRA =
+    "codigo, nombre, proveedor, comprador, monto_total, moneda, fecha, estado, " +
+    "codigo_licitacion, descripcion, total_neto, impuestos, total, " +
+    "nombre_unidad, actividad_comprador, direccion_unidad, comuna_unidad, region_unidad, " +
+    "actividad_proveedor, direccion_proveedor, comuna_proveedor, region_proveedor, " +
+    "cantidad_items, sincronizado_en";
+
 export function ordenCompraUiADb(fila) {
     return {
         codigo: fila.codigo,

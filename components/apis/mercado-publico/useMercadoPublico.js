@@ -26,7 +26,8 @@ export function useMercadoPublico(modulo) {
         loading: true,
         error: null,
         total: 0,
-        sincronizando: !yaSeSincronizoEnSesion(),
+        // Valor fijo en SSR y primer render del cliente; sessionStorage se lee en useEffect.
+        sincronizando: true,
     });
 
     const cargarDesdeDb = useCallback(async () => {

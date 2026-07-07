@@ -1,13 +1,5 @@
-import { listarFilasMercadoPublico } from "@/services/supabase/mercadoPublicoRepo";
+import { listarOrdenesCompra } from "@/services/supabase/mercadoPublicoRepo";
 
-export async function getOrdenesCompra({ limite = 50000 } = {}) {
-    const { filas, totalRegistros } = await listarFilasMercadoPublico(
-        "ordenes-compra",
-        { limite }
-    );
-
-    return {
-        filas,
-        totalRegistros,
-    };
+export async function getOrdenesCompra() {
+    return listarOrdenesCompra();
 }

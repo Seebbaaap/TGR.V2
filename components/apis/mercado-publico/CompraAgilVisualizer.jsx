@@ -7,7 +7,7 @@ import SkeletonTabla from "@/components/shared/SkeletonTabla";
 import { useMercadoPublico } from "./useMercadoPublico";
 import AvisoDesdeDb from "./AvisoDesdeDb";
 import MercadoPublicoDetalleModal from "./MercadoPublicoDetalleModal";
-
+import { ordenarFilasMp } from "@/lib/mercado-publico/ordenarFilasMp";
 
 function formatMoney(value) {
     const amount = Number(value || 0);
@@ -69,6 +69,7 @@ export default function CompraAgilVisualizer() {
     const [busqueda, setBusqueda] = useState("");
     const [estadoFiltro, setEstadoFiltro] = useState("");
     const [regionFiltro, setRegionFiltro] = useState("");
+    const [orden, setOrden] = useState("");
     const [detalleAbierto, setDetalleAbierto] = useState(null);
     const [parches, setParches] = useState({});
 
@@ -92,7 +93,7 @@ export default function CompraAgilVisualizer() {
     }, [dataActualizada]);
 
     const filas = useMemo(() => {
-        return dataActualizada.filter((row) => {
+        const filtradas = dataActualizada.filter((row) => {
             const nombre = row.nombre ?? "";
             const codigo = row.codigo ?? "";
             const organismo = row.organismo ?? "";
@@ -111,7 +112,9 @@ export default function CompraAgilVisualizer() {
 
             return textMatch && estadoMatch && regionMatch;
         });
-    }, [dataActualizada, busqueda, estadoFiltro, regionFiltro]);
+
+        return ordenarFilasMp(filtradas, orden, "monto");
+    }, [dataActualizada, busqueda, estadoFiltro, regionFiltro, orden]);
 
     const columns = [
         {
@@ -247,7 +250,7 @@ export default function CompraAgilVisualizer() {
                         maxWidth: "60ch",
                     }}
                 >
-                    Compras ágiles sincronizadas desde Mercado Público y servidas desde Supabase.
+                    Compras ágiles sincronizadas desde Mercado Público y servidas desde Base de Datos
                 </p>
             </div>
 
@@ -286,21 +289,8 @@ export default function CompraAgilVisualizer() {
                 visible
                 sincronizando={sincronizando}
                 hayFilas={data.length > 0}
+                error={error}
             />
-            {error && (
-                <div
-                    style={{
-                        padding: "0.75rem 1rem",
-                        borderRadius: "0.75rem",
-                        border: "1px solid var(--warning)",
-                        background: "color-mix(in srgb, var(--warning) 10%, transparent)",
-                        color: "var(--warning)",
-                        fontSize: "0.82rem",
-                    }}
-                >
-                    {error}
-                </div>
-            )}
 
             {!loading && (
                 <div
@@ -374,6 +364,27 @@ export default function CompraAgilVisualizer() {
                                 {r}
                             </option>
                         ))}
+                    </select>
+
+                    <select
+                        value={orden}
+                        onChange={(e) => setOrden(e.target.value)}
+                        style={{
+                            minWidth: "220px",
+                            padding: "0.7rem 0.9rem",
+                            borderRadius: "0.75rem",
+                            border: "1px solid var(--border)",
+                            background: "var(--surface-2)",
+                            color: "var(--text-secondary)",
+                            fontSize: "0.84rem",
+                            outline: "none",
+                        }}
+                    >
+                        <option value="">Orden predeterminado</option>
+                        <option value="precio-desc">Precio (Mayor a menor)</option>
+                        <option value="precio-asc">Precio (Menor a mayor)</option>
+                        <option value="fecha-desc">Fecha (Mayor a menor)</option>
+                        <option value="fecha-asc">Fecha (Menor a mayor)</option>
                     </select>
 
                     {(busqueda || estadoFiltro || regionFiltro) && (

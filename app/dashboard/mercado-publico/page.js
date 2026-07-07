@@ -16,7 +16,7 @@ const modules = [
     {
         href: "/dashboard/mercado-publico/ordenes-compra",
         title: "Órdenes de Compra",
-        description: "Órdenes de compra del Estado, servidas desde Supabase.",
+        description: "Órdenes de compra del Estado, servidas desde Base de Datos",
         accent: "border-emerald-500/30 text-emerald-300",
     },
 ];

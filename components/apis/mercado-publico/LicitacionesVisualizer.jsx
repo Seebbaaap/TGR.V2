@@ -7,8 +7,7 @@ import SkeletonTabla from "@/components/shared/SkeletonTabla";
 import { useMercadoPublico } from "./useMercadoPublico";
 import AvisoDesdeDb from "./AvisoDesdeDb";
 import MercadoPublicoDetalleModal from "./MercadoPublicoDetalleModal";
-
-
+import { ordenarFilasMp } from "@/lib/mercado-publico/ordenarFilasMp";
 
 function formatFecha(valor) {
     if (!valor) return "—";
@@ -78,6 +77,7 @@ export default function LicitacionesVisualizer() {
 
     const [busqueda, setBusqueda] = useState("");
     const [estadoFiltro, setEstadoFiltro] = useState("");
+    const [orden, setOrden] = useState("");
     const [detalleAbierto, setDetalleAbierto] = useState(null);
     const [parches, setParches] = useState({});
 
@@ -96,7 +96,7 @@ export default function LicitacionesVisualizer() {
     }, [dataActualizada]);
 
     const filas = useMemo(() => {
-        return dataActualizada.filter((row) => {
+        const filtradas = dataActualizada.filter((row) => {
             const nombre = row.nombre ?? "";
             const codigo = row.codigo ?? "";
             const estado = row.estado ?? "";
@@ -110,7 +110,9 @@ export default function LicitacionesVisualizer() {
             const estadoMatch = !estadoFiltro || estado === estadoFiltro;
             return textMatch && estadoMatch;
         });
-    }, [dataActualizada, busqueda, estadoFiltro]);
+
+        return ordenarFilasMp(filtradas, orden, "montoEstimado");
+    }, [dataActualizada, busqueda, estadoFiltro, orden]);
 
     const columns = [
         {
@@ -222,7 +224,7 @@ export default function LicitacionesVisualizer() {
                     Licitaciones
                 </h1>
                 <p style={{ margin: 0, marginTop: "0.45rem", color: "var(--text-muted)", fontSize: "0.92rem", maxWidth: "60ch" }}>
-                    Licitaciones sincronizadas desde Mercado Público y servidas desde Supabase.
+                    Licitaciones sincronizadas desde Mercado Público y servidas desde Base de Datos
                 </p>
             </div>
 
@@ -260,24 +262,8 @@ export default function LicitacionesVisualizer() {
                 visible
                 sincronizando={sincronizando}
                 hayFilas={data.length > 0}
+                error={error}
             />
-            {error && (
-                <div
-
-                    style={{
-                        padding: "0.75rem 1rem",
-                        borderRadius: "0.75rem",
-                        border: "1px solid var(--warning)",
-                        background: "color-mix(in srgb, var(--warning) 10%, transparent)",
-                        color: "var(--warning)",
-                        fontSize: "0.82rem",
-                    }}
-                >
-
-                    {error}
-                </div>
-
-            )}
 
             {!loading && (
                 <div
@@ -329,6 +315,27 @@ export default function LicitacionesVisualizer() {
                                 {e}
                             </option>
                         ))}
+                    </select>
+
+                    <select
+                        value={orden}
+                        onChange={(e) => setOrden(e.target.value)}
+                        style={{
+                            minWidth: "220px",
+                            padding: "0.7rem 0.9rem",
+                            borderRadius: "0.75rem",
+                            border: "1px solid var(--border)",
+                            background: "var(--surface-2)",
+                            color: "var(--text-secondary)",
+                            fontSize: "0.84rem",
+                            outline: "none",
+                        }}
+                    >
+                        <option value="">Orden predeterminado</option>
+                        <option value="precio-desc">Precio (Mayor a menor)</option>
+                        <option value="precio-asc">Precio (Menor a mayor)</option>
+                        <option value="fecha-desc">Fecha (Mayor a menor)</option>
+                        <option value="fecha-asc">Fecha (Menor a mayor)</option>
                     </select>
 
                     {(busqueda || estadoFiltro) && (

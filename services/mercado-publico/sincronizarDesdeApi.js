@@ -2,14 +2,26 @@ import { fetchMercadoPublico } from "@/services/mercado-publico/mercadoPublicoCl
 import { fetchCompraAgil } from "@/services/mercado-publico/fetchCompraAgil";
 import { mapLicitacion, mapOrdenCompra, mapCompraAgil } from "@/services/mercado-publico/mercadoPublicoMapper";
 import { extraerListado } from "@/lib/mercado-publico/extraerListado";
-import { upsertFilasMercadoPublico } from "@/services/supabase/mercadoPublicoRepo";
+import {
+    DIAS_RETENCION,
+    upsertFilasMercadoPublico,
+    borrarRegistrosAntiguos,
+} from "@/services/supabase/mercadoPublicoRepo";
+
+function formatearFechaConsulta(fecha) {
+    const dd = String(fecha.getDate()).padStart(2, "0");
+    const mm = String(fecha.getMonth() + 1).padStart(2, "0");
+    const yyyy = fecha.getFullYear();
+    return `${dd}${mm}${yyyy}`;
+}
 
 function getFechaHoy() {
-    const hoy = new Date();
-    const dd = String(hoy.getDate()).padStart(2, "0");
-    const mm = String(hoy.getMonth() + 1).padStart(2, "0");
-    const yyyy = hoy.getFullYear();
-    return `${dd}${mm}${yyyy}`;
+    return formatearFechaConsulta(new Date());
+}
+
+function licitacionSigueVigente(fila) {
+    if (!fila?.fechaCierre) return false;
+    return new Date(fila.fechaCierre) >= new Date();
 }
 
 function obtenerRangoPublicacion(diasAtras = 7) {
@@ -47,10 +59,21 @@ export async function sincronizarLicitacionesDesdeApi({ estado = "", textoBusque
         estado,
         ...(textoBusqueda ? { codigo: textoBusqueda } : {}),
     });
-    const lista = extraerListado(json);
-    const filas = lista.map(mapLicitacion).filter((f) => f?.codigo);
+
+    const filas = extraerListado(json)
+        .map(mapLicitacion)
+        .filter((f) => f?.codigo && licitacionSigueVigente(f));
+
     const { insertadas } = await upsertFilasMercadoPublico("licitaciones", filas);
-    return { modulo: "licitaciones", insertadas, total: filas.length, fechaUsada: fechaConsulta };
+    const { eliminadas } = await borrarRegistrosAntiguos("licitaciones");
+
+    return {
+        modulo: "licitaciones",
+        insertadas,
+        eliminadas,
+        total: filas.length,
+        fechaUsada: fechaConsulta,
+    };
 }
 
 export async function sincronizarOrdenesCompraDesdeApi({ codigo = "" } = {}) {
@@ -68,7 +91,7 @@ export async function sincronizarComprasAgilesDesdeApi({
     estado = "",
     region = "",
     textoBusqueda = "",
-    diasAtras = 7,
+    diasAtras = DIAS_RETENCION,
 } = {}) {
     const rango = obtenerRangoPublicacion(diasAtras);
     const fechaUsada = rango.publicado_hasta;
@@ -86,5 +109,7 @@ export async function sincronizarComprasAgilesDesdeApi({
     const lista = extraerListaCompraAgil(respuestaApi);
     const filas = lista.map(mapCompraAgil).filter((f) => f?.codigo);
     const { insertadas } = await upsertFilasMercadoPublico("compra-agil", filas);
-    return { modulo: "compra-agil", insertadas, total: filas.length, fechaUsada };
+    const { eliminadas } = await borrarRegistrosAntiguos("compra-agil");
+
+    return { modulo: "compra-agil", insertadas, eliminadas, total: filas.length, fechaUsada };
 }
