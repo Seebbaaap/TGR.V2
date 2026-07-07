@@ -1,5 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { tieneDetalleCompraAgil } from "@/services/mercado-publico/mercadoPublicoMapper";
+import { tieneDetalleCompraAgil, tieneDetalleEnPayload } from "@/services/mercado-publico/mercadoPublicoMapper";
 import {
     licitacionUiADb,
     licitacionDbAUi,
@@ -247,4 +247,31 @@ export async function obtenerFilaPorCodigo(modulo, codigo) {
     const { data, error } = await consulta.maybeSingle();
     if (error) throw error;
     return data ? dbAUi(data) : null;
+}
+
+// filas recientes que aun no tienen payload de detalle (para el cron)
+export async function listarPendientesDetalle(modulo, limite = 10) {
+    const config = getConfig(modulo);
+    const { tabla, orden } = config;
+    const supabase = getSupabaseAdmin();
+
+    let consulta = supabase
+        .from(tabla)
+        .select("codigo, payload")
+        .order(orden.columna, { ascending: orden.ascendente })
+        .limit(150);
+
+    if (config.soloVigentes) {
+        consulta = consulta.gte("fecha_cierre", ahoraIso());
+    } else if (config.diasRetencion) {
+        consulta = consulta.gte(config.columnaRetencion, limiteDesde(config.diasRetencion));
+    }
+
+    const { data, error } = await consulta;
+    if (error) throw error;
+
+    return (data ?? [])
+        .filter((row) => !tieneDetalleEnPayload(modulo, row.payload))
+        .slice(0, limite)
+        .map((row) => ({ modulo, codigo: row.codigo }));
 }
