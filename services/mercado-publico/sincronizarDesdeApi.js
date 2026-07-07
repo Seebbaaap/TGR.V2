@@ -52,7 +52,7 @@ function extraerListaCompraAgil(respuestaApi) {
 }
 
 const TAMANO_PAGINA_COMPRA_AGIL = 50;
-// la api a veces reporta 200 paginas globales; para 7 dias no hace falta recorrer todo eso
+// la api a veces reporta 200 paginas globales para 7 dias no hace falta recorrer todo eso
 const MAX_PAGINAS_COMPRA_AGIL = 40;
 const PAUSA_ENTRE_PAGINAS_MS = 500;
 
@@ -137,7 +137,7 @@ export async function sincronizarComprasAgilesDesdeApi({
     let totalGuardado = 0;
     let avisoParcial = null;
 
-    // guardamos cada pagina en supabase al vuelo — si falla en la 120 no perdemos las anteriores
+    // guardamos cada pagina en supabase al vuelo  si falla en la 120 no perdemos las anteriores
     for (let numeroPagina = 1; numeroPagina <= MAX_PAGINAS_COMPRA_AGIL; numeroPagina += 1) {
         onProgreso?.({
             pagina: numeroPagina,
