@@ -1,0 +1,36 @@
+name: Enriquecer detalle Mercado Público
+
+on:
+  schedule:
+    - cron: "2,7,12,17,22,27,32,37,42,47,52,57 * * * *"
+    # corre en minutos impares/alternos respecto al otro workflow (opcional)
+  workflow_dispatch:
+
+jobs:
+  sync-detalle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Enriquecer detalles pendientes
+        env:
+          APP_URL: ${{ secrets.VERCEL_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          echo "=== Inicio enriquecimiento detalle $(date -u +%Y-%m-%dT%H:%M:%SZ) ==="
+          
+          HTTP_CODE=$(curl -sS -w "%{http_code}" -o response.json -X POST \
+            "${APP_URL}/api/sync/enriquecer-detalle?secret=${CRON_SECRET}&limite=5")
+          
+          echo "HTTP status: ${HTTP_CODE}"
+          cat response.json | jq . 2>/dev/null || cat response.json
+          
+          # log legible por registro
+          jq -r '.procesados[]? | "[\(.modulo)] \(.codigo) → detalle: \(.detalle)"' response.json 2>/dev/null || true
+          
+          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+            echo "::error::Enriquecimiento falló HTTP ${HTTP_CODE}"
+            exit 1
+          fi
+          
+          echo "=== Fin enriquecimiento ==="
