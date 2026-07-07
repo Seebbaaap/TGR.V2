@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { tieneDetalleCompraAgil } from "@/services/mercado-publico/mercadoPublicoMapper";
 import {
     licitacionUiADb,
     licitacionDbAUi,
@@ -69,13 +70,73 @@ function deduplicarPorCodigo(filasUi = []) {
     return Array.from(mapa.values());
 }
 
+function tieneProductosUi(productos) {
+    return Array.isArray(productos) && productos.length > 0;
+}
+
+// si ya abrieron "ver mas", el listado del sync no deberia borrar ese detalle
+function mergeCompraAgilConExistente(nueva, existente) {
+    if (!existente) return nueva;
+
+    const detalleGuardado = tieneDetalleCompraAgil(existente.payload ?? existente._raw);
+
+    return {
+        ...nueva,
+        descripcion: nueva.descripcion ?? existente.descripcion ?? null,
+        productos: tieneProductosUi(nueva.productos)
+            ? nueva.productos
+            : (existente.productos ?? []),
+        direccionEntrega: nueva.direccionEntrega ?? existente.direccionEntrega ?? null,
+        plazoEntregaDias: nueva.plazoEntregaDias ?? existente.plazoEntregaDias ?? null,
+        totalOfertasRecibidas:
+            nueva.totalOfertasRecibidas ?? existente.totalOfertasRecibidas ?? null,
+        estadoConvocatoria: nueva.estadoConvocatoria ?? existente.estadoConvocatoria ?? null,
+        fechaCierrePrimerLlamado:
+            nueva.fechaCierrePrimerLlamado ?? existente.fechaCierrePrimerLlamado ?? null,
+        fechaCierreSegundoLlamado:
+            nueva.fechaCierreSegundoLlamado ?? existente.fechaCierreSegundoLlamado ?? null,
+        _raw: detalleGuardado ? (existente.payload ?? existente._raw) : nueva._raw,
+    };
+}
+
+async function obtenerFilasExistentesPorCodigo(modulo, codigos = []) {
+    if (codigos.length === 0) return new Map();
+
+    const { tabla, dbAUi } = getConfig(modulo);
+    const supabase = getSupabaseAdmin();
+
+    const { data, error } = await supabase
+        .from(tabla)
+        .select("*")
+        .in("codigo", codigos);
+
+    if (error) throw error;
+
+    const mapa = new Map();
+    for (const row of data ?? []) {
+        mapa.set(row.codigo, dbAUi(row));
+    }
+
+    return mapa;
+}
+
 export async function upsertFilasMercadoPublico(modulo, filasUi = []) {
     const { tabla, uiADb } = getConfig(modulo);
     const unicas = deduplicarPorCodigo(filasUi);
 
     if (unicas.length === 0) return { insertadas: 0 };
 
-    const rows = unicas.map(uiADb);
+    let filasFinales = unicas;
+
+    if (modulo === "compra-agil") {
+        const codigos = unicas.map((f) => f.codigo);
+        const existentes = await obtenerFilasExistentesPorCodigo(modulo, codigos);
+        filasFinales = unicas.map((fila) =>
+            mergeCompraAgilConExistente(fila, existentes.get(fila.codigo))
+        );
+    }
+
+    const rows = filasFinales.map(uiADb);
     const supabase = getSupabaseAdmin();
 
     const { error } = await supabase

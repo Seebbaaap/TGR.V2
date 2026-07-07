@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
+    MP_SYNC_PROGRESS_EVENT,
     MP_SYNC_READY_EVENT,
-    yaSeSincronizoEnSesion,
 } from "@/lib/mercadoPublicoSession";
 
 function normalizarRespuesta(json) {
@@ -26,19 +26,19 @@ export function useMercadoPublico(modulo) {
         loading: true,
         error: null,
         total: 0,
-        // Valor fijo en SSR y primer render del cliente; sessionStorage se lee en useEffect.
-        sincronizando: true,
+        sincronizando: false,
+        mensajeSync: null,
+        errorSync: null,
     });
 
-    const cargarDesdeDb = useCallback(async () => {
+    const cargarDesdeDb = useCallback(async ({ silencioso = false } = {}) => {
         if (!modulo) return;
 
         try {
             setState((prev) => ({
                 ...prev,
-                loading: true,
-                error: null,
-                sincronizando: false,
+                loading: !silencioso,
+                error: silencioso ? prev.error : null,
             }));
 
             const res = await fetch(`/api/mercado-publico/${modulo}`, {
@@ -49,67 +49,80 @@ export function useMercadoPublico(modulo) {
             const json = await res.json();
 
             if (!res.ok) {
-                setState({
+                setState((prev) => ({
+                    ...prev,
                     data: [],
                     loading: false,
                     error: json?.error || "No se pudieron cargar los datos.",
                     total: 0,
-                    sincronizando: false,
-                });
+                }));
                 return;
             }
 
             const { filas, total, error } = normalizarRespuesta(json);
 
-            setState({
+            setState((prev) => ({
+                ...prev,
                 data: filas,
                 loading: false,
                 error,
                 total,
-                sincronizando: false,
-            });
+            }));
         } catch (error) {
-            setState({
+            setState((prev) => ({
+                ...prev,
                 data: [],
                 loading: false,
                 error: error?.message || "Error inesperado al leer Supabase.",
                 total: 0,
-                sincronizando: false,
-            });
+            }));
         }
     }, [modulo]);
 
     useEffect(() => {
         if (!modulo) return;
 
+        // primero mostramos lo que ya hay en supabase, sin esperar al sync
+        cargarDesdeDb();
+
+        function onSyncProgress(event) {
+            setState((prev) => ({
+                ...prev,
+                sincronizando: true,
+                mensajeSync: event.detail?.mensaje ?? prev.mensajeSync,
+                errorSync: null,
+            }));
+        }
+
         function onSyncReady(event) {
             if (event?.detail?.ok === false) {
                 setState((prev) => ({
                     ...prev,
-                    loading: false,
                     sincronizando: false,
-                    error:
+                    mensajeSync: null,
+                    errorSync:
                         event.detail.error ||
                         "No se pudo sincronizar Mercado Público.",
                 }));
                 return;
             }
 
-            cargarDesdeDb();
-        }
-
-        if (yaSeSincronizoEnSesion()) {
-            cargarDesdeDb();
-        } else {
             setState((prev) => ({
                 ...prev,
-                loading: true,
-                sincronizando: true,
+                sincronizando: false,
+                mensajeSync: null,
+                errorSync: null,
             }));
-            window.addEventListener(MP_SYNC_READY_EVENT, onSyncReady);
+
+            // cuando el sync termina, refrescamos la tabla sin bloquear la ui
+            cargarDesdeDb({ silencioso: true });
         }
 
+        window.addEventListener(MP_SYNC_PROGRESS_EVENT, onSyncProgress);
+        window.addEventListener(MP_SYNC_READY_EVENT, onSyncReady);
+
         return () => {
+            window.removeEventListener(MP_SYNC_PROGRESS_EVENT, onSyncProgress);
             window.removeEventListener(MP_SYNC_READY_EVENT, onSyncReady);
         };
     }, [modulo, cargarDesdeDb]);

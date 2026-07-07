@@ -3,12 +3,16 @@
 export default function AvisoDesdeDb({
     visible = true,
     sincronizando = false,
+    mensajeSync = null,
     hayFilas = false,
     error = null,
+    errorSync = null,
 }) {
     if (!visible) return null;
 
-    const esError = !sincronizando && error;
+    const esErrorDb = !sincronizando && error;
+    const esErrorSync = !sincronizando && errorSync;
+    const esError = esErrorDb || esErrorSync;
 
     return (
         <div
@@ -24,12 +28,14 @@ export default function AvisoDesdeDb({
             }}
         >
             {sincronizando
-                ? "Sincronizando con Mercado Público y actualizando Supabase..."
-                : esError
-                  ? `Error de conexión con Supabase: ${error}`
-                  : hayFilas
-                    ? "Datos servidos desde Supabase (sincronizados al abrir la aplicación)."
-                    : "Sin registros en Supabase. Si acabas de abrir la app, espera a que termine la sincronización."}
+                ? (mensajeSync ?? "Sincronizando con Mercado Público en segundo plano...")
+                : esErrorSync
+                  ? `Sync en segundo plano: ${errorSync}`
+                  : esErrorDb
+                    ? `Error de conexión con Supabase: ${error}`
+                    : hayFilas
+                      ? "Datos desde Supabase. La sincronización en segundo plano actualiza los registros."
+                      : "Sin registros en Supabase todavía. El sync en segundo plano puede tardar un poco."}
         </div>
     );
 }

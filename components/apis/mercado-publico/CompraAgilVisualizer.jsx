@@ -65,7 +65,7 @@ function EstadoBadge({ estado }) {
 }
 
 export default function CompraAgilVisualizer() {
-    const { data, loading, error, total, sincronizando } = useMercadoPublico("compra-agil");
+    const { data, loading, error, total, sincronizando, mensajeSync, errorSync } = useMercadoPublico("compra-agil");
     const [busqueda, setBusqueda] = useState("");
     const [estadoFiltro, setEstadoFiltro] = useState("");
     const [regionFiltro, setRegionFiltro] = useState("");
@@ -288,8 +288,10 @@ export default function CompraAgilVisualizer() {
             <AvisoDesdeDb
                 visible
                 sincronizando={sincronizando}
+                mensajeSync={mensajeSync}
                 hayFilas={data.length > 0}
                 error={error}
+                errorSync={errorSync}
             />
 
             {!loading && (

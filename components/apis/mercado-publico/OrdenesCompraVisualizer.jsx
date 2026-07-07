@@ -63,7 +63,7 @@ function EstadoBadge({ estado }) {
 }
 
 export default function OrdenesCompraVisualizer() {
-    const { data, loading, error, total, sincronizando } = useMercadoPublico("ordenes-compra");
+    const { data, loading, error, total, sincronizando, mensajeSync, errorSync } = useMercadoPublico("ordenes-compra");
     const [busqueda, setBusqueda] = useState("");
     const [estadoFiltro, setEstadoFiltro] = useState("");
     const [orden, setOrden] = useState("");
@@ -252,8 +252,10 @@ export default function OrdenesCompraVisualizer() {
             <AvisoDesdeDb
                 visible
                 sincronizando={sincronizando}
+                mensajeSync={mensajeSync}
                 hayFilas={data.length > 0}
                 error={error}
+                errorSync={errorSync}
             />
 
             {!loading && (

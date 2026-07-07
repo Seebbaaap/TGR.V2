@@ -73,7 +73,7 @@ function EstadoBadge({ estado }) {
 }
 
 export default function LicitacionesVisualizer() {
-    const { data, loading, error, total, sincronizando } = useMercadoPublico("licitaciones");
+    const { data, loading, error, total, sincronizando, mensajeSync, errorSync } = useMercadoPublico("licitaciones");
 
     const [busqueda, setBusqueda] = useState("");
     const [estadoFiltro, setEstadoFiltro] = useState("");
@@ -261,8 +261,10 @@ export default function LicitacionesVisualizer() {
             <AvisoDesdeDb
                 visible
                 sincronizando={sincronizando}
+                mensajeSync={mensajeSync}
                 hayFilas={data.length > 0}
                 error={error}
+                errorSync={errorSync}
             />
 
             {!loading && (
