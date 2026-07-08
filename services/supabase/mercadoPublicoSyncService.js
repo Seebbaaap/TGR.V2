@@ -4,6 +4,8 @@ import {
     sincronizarComprasAgilesDesdeApi,
 } from "@/services/mercado-publico/sincronizarDesdeApi";
 
+export const MODULOS_SYNC = ["licitaciones", "ordenes-compra", "compra-agil"];
+
 async function sincronizarModuloSeguro(nombre, fn) {
     try {
         return await fn();
@@ -36,63 +38,74 @@ function esErrorFatal(resultado) {
     return true;
 }
 
-export async function syncMercadoPublico({ onProgreso } = {}) {
+export async function syncMercadoPublicoModulo(modulo, { onProgreso } = {}) {
     const avisar = (mensaje, extra = {}) => onProgreso?.({ mensaje, ...extra });
 
-    const resultados = [];
-
-    avisar("Consultando licitaciones de hoy...", { modulo: "licitaciones" });
-    resultados.push(
-        await sincronizarModuloSeguro("licitaciones", sincronizarLicitacionesDesdeApi)
-    );
-    const lic = resultados[0];
-    if (lic.error) {
-        avisar(`Licitaciones: error — ${lic.error}`, { modulo: "licitaciones" });
-    } else {
-        avisar(
-            `Licitaciones actualizadas (${lic.total ?? 0} registros, ${lic.eliminadas ?? 0} vencidas purgadas)`,
-            { modulo: "licitaciones" }
+    if (modulo === "licitaciones") {
+        avisar("Consultando licitaciones de hoy...", { modulo });
+        const resultado = await sincronizarModuloSeguro(
+            "licitaciones",
+            sincronizarLicitacionesDesdeApi
         );
+        if (resultado.error) {
+            avisar(`Licitaciones: error — ${resultado.error}`, { modulo });
+        } else {
+            avisar(
+                `Licitaciones actualizadas (${resultado.total ?? 0} registros, ${resultado.eliminadas ?? 0} vencidas purgadas)`,
+                { modulo }
+            );
+        }
+        return resultado;
     }
 
-    avisar("Consultando órdenes de compra de hoy...", { modulo: "ordenes-compra" });
-    resultados.push(
-        await sincronizarModuloSeguro("ordenes-compra", sincronizarOrdenesCompraDesdeApi)
-    );
-    const oc = resultados[1];
-    if (oc.error) {
-        avisar(`Órdenes de compra: error — ${oc.error}`, { modulo: "ordenes-compra" });
-    } else {
-        avisar(`Órdenes de compra actualizadas (${oc.total ?? 0} registros)`, {
-            modulo: "ordenes-compra",
-        });
+    if (modulo === "ordenes-compra") {
+        avisar("Consultando órdenes de compra de hoy...", { modulo });
+        const resultado = await sincronizarModuloSeguro(
+            "ordenes-compra",
+            sincronizarOrdenesCompraDesdeApi
+        );
+        if (resultado.error) {
+            avisar(`Órdenes de compra: error — ${resultado.error}`, { modulo });
+        } else {
+            avisar(`Órdenes de compra actualizadas (${resultado.total ?? 0} registros)`, {
+                modulo,
+            });
+        }
+        return resultado;
     }
 
-    avisar("Compra ágil: iniciando consulta paginada (últimos 7 días)...", {
-        modulo: "compra-agil",
-    });
-    resultados.push(
-        await sincronizarModuloSeguro("compra-agil", () =>
+    if (modulo === "compra-agil") {
+        avisar("Compra ágil: iniciando consulta paginada (últimos 7 días)...", { modulo });
+        const resultado = await sincronizarModuloSeguro("compra-agil", () =>
             sincronizarComprasAgilesDesdeApi({
                 onProgreso: (detalle) => {
-                    avisar(mensajeCompraAgil(detalle), {
-                        modulo: "compra-agil",
-                        ...detalle,
-                    });
+                    avisar(mensajeCompraAgil(detalle), { modulo, ...detalle });
                 },
             })
-        )
-    );
-    const ca = resultados[2];
-    if (ca.parcial && ca.aviso) {
-        avisar(`Compra ágil: ${ca.aviso}`, { modulo: "compra-agil" });
-    } else if (ca.error) {
-        avisar(`Compra ágil: error — ${ca.error}`, { modulo: "compra-agil" });
-    } else {
-        avisar(
-            `Compra ágil lista (${ca.total ?? 0} registros, ${ca.paginasConsultadas ?? 1} páginas)`,
-            { modulo: "compra-agil" }
         );
+        if (resultado.parcial && resultado.aviso) {
+            avisar(`Compra ágil: ${resultado.aviso}`, { modulo });
+        } else if (resultado.error) {
+            avisar(`Compra ágil: error — ${resultado.error}`, { modulo });
+        } else {
+            avisar(
+                `Compra ágil lista (${resultado.total ?? 0} registros, ${resultado.paginasConsultadas ?? 1} páginas)`,
+                { modulo }
+            );
+        }
+        return resultado;
+    }
+
+    throw new Error(
+        `Módulo no soportado: ${modulo}. Use: ${MODULOS_SYNC.join(", ")}`
+    );
+}
+
+export async function syncMercadoPublico({ onProgreso } = {}) {
+    const resultados = [];
+
+    for (const modulo of MODULOS_SYNC) {
+        resultados.push(await syncMercadoPublicoModulo(modulo, { onProgreso }));
     }
 
     const huboError = resultados.some(esErrorFatal);
