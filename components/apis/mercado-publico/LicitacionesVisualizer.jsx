@@ -79,8 +79,16 @@ export default function LicitacionesVisualizer() {
     const [estadoFiltro, setEstadoFiltro] = useState("");
     const [orden, setOrden] = useState("");
     const [detalleAbierto, setDetalleAbierto] = useState(null);
+    const [parches, setParches] = useState({});
 
-    const dataActualizada = data;
+    const dataActualizada = useMemo(
+        () => data.map((r) => (parches[r.codigo] ? { ...r, ...parches[r.codigo] } : r)),
+        [data, parches]
+    );
+
+    function onDetalleCargado(fila) {
+        setParches((prev) => ({ ...prev, [fila.codigo]: fila }));
+    }
 
     const estados = useMemo(() => {
         const values = dataActualizada.map((d) => d.estado).filter(Boolean);
@@ -381,9 +389,10 @@ export default function LicitacionesVisualizer() {
 
             {detalleAbierto && (
                 <MercadoPublicoDetalleModal
-                    row={detalleAbierto}
+                    row={parches[detalleAbierto.codigo] ?? detalleAbierto}
                     modulo="licitaciones"
                     onClose={() => setDetalleAbierto(null)}
+                    onDetalleCargado={onDetalleCargado}
                 />
             )}
         </section>

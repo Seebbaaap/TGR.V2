@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { ExternalLink, X } from "lucide-react";
 import { tieneDetalleEnPayload } from "@/services/mercado-publico/mercadoPublicoMapper";
 
@@ -176,16 +177,60 @@ function BotonMercadoPublico({ modulo, codigo }) {
     );
 }
 
-export default function MercadoPublicoDetalleModal({ row, modulo, onClose }) {
-    if (!row) return null;
+export default function MercadoPublicoDetalleModal({ row, modulo, onClose, onDetalleCargado }) {
+    const [fila, setFila] = useState(row);
+    const [cargando, setCargando] = useState(false);
+    const [error, setError] = useState(null);
 
-    const raw = row.payload ?? row._raw ?? {};
-    const codigo = row.codigo ?? row.CodigoExterno ?? row.Codigo;
+    useEffect(() => {
+        setFila(row);
+        setError(null);
+    }, [row]);
+
+    const codigo = fila?.codigo ?? fila?.CodigoExterno ?? fila?.Codigo;
+
+    useEffect(() => {
+        if (!codigo || !modulo) return;
+
+        const payload = fila?.payload ?? fila?._raw;
+        if (tieneDetalleEnPayload(modulo, payload)) return;
+
+        let cancelado = false;
+
+        async function cargar() {
+            setCargando(true);
+            setError(null);
+            try {
+                const res = await fetch(
+                    `/api/mercado-publico/detalle?modulo=${encodeURIComponent(modulo)}&codigo=${encodeURIComponent(codigo)}`
+                );
+                const json = await res.json();
+                if (!res.ok) throw new Error(json.error || "Error cargando detalle");
+                if (!cancelado) {
+                    setFila(json.fila);
+                    onDetalleCargado?.(json.fila);
+                }
+            } catch (e) {
+                if (!cancelado) setError(e.message);
+            } finally {
+                if (!cancelado) setCargando(false);
+            }
+        }
+
+        cargar();
+        return () => {
+            cancelado = true;
+        };
+    }, [codigo, modulo, fila?.payload, fila?._raw]);
+
+    if (!fila) return null;
+
+    const raw = fila.payload ?? fila._raw ?? {};
     const sinDetalle = !tieneDetalleEnPayload(modulo, raw);
-    const titulo = row.nombre ?? row.Nombre ?? raw.Nombre ?? raw.nombre ?? codigo;
-    const itemsOc = itemsOrdenCompraDesdeFila(row, raw);
-    const itemsLicitacion = itemsLicitacionDesdeFila(row, raw);
-    const productosCa = productosCompraAgilDesdeFila(row, raw);
+    const titulo = fila.nombre ?? fila.Nombre ?? raw.Nombre ?? raw.nombre ?? codigo;
+    const itemsOc = itemsOrdenCompraDesdeFila(fila, raw);
+    const itemsLicitacion = itemsLicitacionDesdeFila(fila, raw);
+    const productosCa = productosCompraAgilDesdeFila(fila, raw);
     const presupuestoCa = raw.presupuesto ?? raw.montos ?? {};
     const convocatoriaCa = raw.convocatoria ?? {};
     const fechasCa = raw.fechas ?? {};
@@ -244,9 +289,19 @@ export default function MercadoPublicoDetalleModal({ row, modulo, onClose }) {
                 </div>
 
                 <div style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-                    {sinDetalle && (
+                    {cargando && (
                         <p style={{ margin: 0, color: "var(--text-muted)", fontSize: "0.82rem" }}>
-                            Detalle completo pendiente. Se enriquece periódicamente desde Mercado Público vía cron.
+                            Cargando detalle desde Mercado Público…
+                        </p>
+                    )}
+                    {error && (
+                        <p style={{ margin: 0, color: "var(--warning)", fontSize: "0.82rem" }}>
+                            {error}
+                        </p>
+                    )}
+                    {!cargando && sinDetalle && !error && (
+                        <p style={{ margin: 0, color: "var(--text-muted)", fontSize: "0.82rem" }}>
+                            Detalle no disponible. El cron en segundo plano también intentará enriquecerlo.
                         </p>
                     )}
 
@@ -260,39 +315,39 @@ export default function MercadoPublicoDetalleModal({ row, modulo, onClose }) {
                         <>
                             <Seccion titulo="Identificación">
                                 <div style={grid2}>
-                                    <Campo label="Código externo" valor={row.codigo ?? raw.CodigoExterno} />
-                                    <Campo label="Estado" valor={row.estado ?? raw.Estado} />
-                                    <Campo label="Monto estimado" valor={formatMoney(row.montoEstimado ?? raw.MontoEstimado)} />
-                                    <Campo label="Moneda" valor={row.moneda ?? raw.Moneda ?? "CLP"} />
+                                    <Campo label="Código externo" valor={fila.codigo ?? raw.CodigoExterno} />
+                                    <Campo label="Estado" valor={fila.estado ?? raw.Estado} />
+                                    <Campo label="Monto estimado" valor={formatMoney(fila.montoEstimado ?? raw.MontoEstimado)} />
+                                    <Campo label="Moneda" valor={fila.moneda ?? raw.Moneda ?? "CLP"} />
                                 </div>
                             </Seccion>
 
-                            {(row.descripcion ?? raw.Descripcion) && (
+                            {(fila.descripcion ?? raw.Descripcion) && (
                                 <Seccion titulo="Descripción">
                                     <p style={{ margin: 0, color: "var(--text-muted)", fontSize: "0.82rem", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
-                                        {row.descripcion ?? raw.Descripcion}
+                                        {fila.descripcion ?? raw.Descripcion}
                                     </p>
                                 </Seccion>
                             )}
 
                             <Seccion titulo="Organismo comprador">
                                 <div style={grid2}>
-                                    <Campo label="Nombre organismo" valor={row.organismo ?? raw.Comprador?.NombreOrganismo} />
-                                    <Campo label="Nombre unidad" valor={row.nombreUnidad ?? raw.Comprador?.NombreUnidad} />
-                                    <Campo label="Dirección unidad" valor={row.direccionUnidad ?? raw.Comprador?.DireccionUnidad} />
-                                    <Campo label="Región unidad" valor={row.regionUnidad ?? raw.Comprador?.RegionUnidad} />
+                                    <Campo label="Nombre organismo" valor={fila.organismo ?? raw.Comprador?.NombreOrganismo} />
+                                    <Campo label="Nombre unidad" valor={fila.nombreUnidad ?? raw.Comprador?.NombreUnidad} />
+                                    <Campo label="Dirección unidad" valor={fila.direccionUnidad ?? raw.Comprador?.DireccionUnidad} />
+                                    <Campo label="Región unidad" valor={fila.regionUnidad ?? raw.Comprador?.RegionUnidad} />
                                 </div>
                             </Seccion>
 
                             <Seccion titulo="Plazos y reclamos">
                                 <div style={grid2}>
-                                    <Campo label="Fecha inicio" valor={formatFecha(row.fechaInicio ?? raw.Fechas?.FechaInicio)} />
-                                    <Campo label="Fecha final" valor={formatFecha(row.fechaFinal ?? raw.Fechas?.FechaFinal)} />
-                                    <Campo label="Fecha cierre" valor={formatFecha(row.fechaCierre ?? raw.Fechas?.FechaCierre ?? raw.FechaCierre)} />
+                                    <Campo label="Fecha inicio" valor={formatFecha(fila.fechaInicio ?? raw.Fechas?.FechaInicio)} />
+                                    <Campo label="Fecha final" valor={formatFecha(fila.fechaFinal ?? raw.Fechas?.FechaFinal)} />
+                                    <Campo label="Fecha cierre" valor={formatFecha(fila.fechaCierre ?? raw.Fechas?.FechaCierre ?? raw.FechaCierre)} />
                                     <Campo
                                         label="Cantidad de reclamos"
                                         valor={
-                                            row.cantidadReclamos ?? raw.CantidadReclamos ?? "—"
+                                            fila.cantidadReclamos ?? raw.CantidadReclamos ?? "—"
                                         }
                                     />
                                 </div>
@@ -348,46 +403,46 @@ export default function MercadoPublicoDetalleModal({ row, modulo, onClose }) {
                         <>
                             <Seccion titulo="Identificación">
                                 <div style={grid2}>
-                                    <Campo label="Código" valor={row.codigo ?? raw.Codigo} />
-                                    <Campo label="Estado" valor={row.estado ?? raw.Estado} />
-                                    <Campo label="Código licitación" valor={row.codigoLicitacion ?? raw.CodigoLicitacion} />
-                                    <Campo label="Total neto" valor={formatMoney(row.totalNeto ?? raw.TotalNeto)} />
-                                    <Campo label="Impuestos" valor={formatMoney(row.impuestos ?? raw.Impuestos)} />
-                                    <Campo label="Total" valor={formatMoney(row.total ?? raw.Total ?? row.montoTotal)} />
+                                    <Campo label="Código" valor={fila.codigo ?? raw.Codigo} />
+                                    <Campo label="Estado" valor={fila.estado ?? raw.Estado} />
+                                    <Campo label="Código licitación" valor={fila.codigoLicitacion ?? raw.CodigoLicitacion} />
+                                    <Campo label="Total neto" valor={formatMoney(fila.totalNeto ?? raw.TotalNeto)} />
+                                    <Campo label="Impuestos" valor={formatMoney(fila.impuestos ?? raw.Impuestos)} />
+                                    <Campo label="Total" valor={formatMoney(fila.total ?? raw.Total ?? fila.montoTotal)} />
                                 </div>
                             </Seccion>
 
-                            {(row.descripcion ?? raw.Descripcion) && (
+                            {(fila.descripcion ?? raw.Descripcion) && (
                                 <Seccion titulo="Descripción">
                                     <p style={{ margin: 0, color: "var(--text-muted)", fontSize: "0.82rem", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
-                                        {row.descripcion ?? raw.Descripcion}
+                                        {fila.descripcion ?? raw.Descripcion}
                                     </p>
                                 </Seccion>
                             )}
 
                             <Seccion titulo="Comprador">
                                 <div style={grid2}>
-                                    <Campo label="Nombre organismo" valor={row.comprador ?? raw.Comprador?.NombreOrganismo} />
-                                    <Campo label="Nombre unidad" valor={row.nombreUnidad ?? raw.Comprador?.NombreUnidad} />
-                                    <Campo label="Actividad" valor={row.actividadComprador ?? raw.Comprador?.Actividad} />
-                                    <Campo label="Dirección unidad" valor={row.direccionUnidad ?? raw.Comprador?.DireccionUnidad} />
-                                    <Campo label="Comuna unidad" valor={row.comunaUnidad ?? raw.Comprador?.ComunaUnidad} />
-                                    <Campo label="Región unidad" valor={(row.regionUnidad ?? raw.Comprador?.RegionUnidad ?? "").trim() || "—"} />
+                                    <Campo label="Nombre organismo" valor={fila.comprador ?? raw.Comprador?.NombreOrganismo} />
+                                    <Campo label="Nombre unidad" valor={fila.nombreUnidad ?? raw.Comprador?.NombreUnidad} />
+                                    <Campo label="Actividad" valor={fila.actividadComprador ?? raw.Comprador?.Actividad} />
+                                    <Campo label="Dirección unidad" valor={fila.direccionUnidad ?? raw.Comprador?.DireccionUnidad} />
+                                    <Campo label="Comuna unidad" valor={fila.comunaUnidad ?? raw.Comprador?.ComunaUnidad} />
+                                    <Campo label="Región unidad" valor={(fila.regionUnidad ?? raw.Comprador?.RegionUnidad ?? "").trim() || "—"} />
                                 </div>
                             </Seccion>
 
                             <Seccion titulo="Proveedor">
                                 <div style={grid2}>
-                                    <Campo label="Nombre" valor={row.proveedor ?? raw.Proveedor?.Nombre} />
-                                    <Campo label="Actividad" valor={row.actividadProveedor ?? raw.Proveedor?.Actividad} />
-                                    <Campo label="Dirección" valor={row.direccionProveedor ?? raw.Proveedor?.Direccion} />
-                                    <Campo label="Comuna" valor={row.comunaProveedor ?? raw.Proveedor?.Comuna} />
-                                    <Campo label="Región" valor={(row.regionProveedor ?? raw.Proveedor?.Region ?? "").trim() || "—"} />
+                                    <Campo label="Nombre" valor={fila.proveedor ?? raw.Proveedor?.Nombre} />
+                                    <Campo label="Actividad" valor={fila.actividadProveedor ?? raw.Proveedor?.Actividad} />
+                                    <Campo label="Dirección" valor={fila.direccionProveedor ?? raw.Proveedor?.Direccion} />
+                                    <Campo label="Comuna" valor={fila.comunaProveedor ?? raw.Proveedor?.Comuna} />
+                                    <Campo label="Región" valor={(fila.regionProveedor ?? raw.Proveedor?.Region ?? "").trim() || "—"} />
                                 </div>
                             </Seccion>
 
                             {itemsOc.length > 0 && (
-                                <Seccion titulo={`Ítems (${row.cantidadItems ?? raw.Items?.Cantidad ?? itemsOc.length})`}>
+                                <Seccion titulo={`Ítems (${fila.cantidadItems ?? raw.Items?.Cantidad ?? itemsOc.length})`}>
                                     <div style={{ overflowX: "auto" }}>
                                         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
                                             <thead>
@@ -446,24 +501,24 @@ export default function MercadoPublicoDetalleModal({ row, modulo, onClose }) {
                         <>
                             <Seccion titulo="Identificación">
                                 <div style={grid2}>
-                                    <Campo label="Código" valor={row.codigo ?? raw.codigo} />
-                                    <Campo label="Estado" valor={row.estado ?? raw.estado?.glosa ?? raw.estado?.codigo} />
+                                    <Campo label="Código" valor={fila.codigo ?? raw.codigo} />
+                                    <Campo label="Estado" valor={fila.estado ?? raw.estado?.glosa ?? raw.estado?.codigo} />
                                     <Campo
                                         label="Presupuesto estimado"
                                         valor={formatMoney(
-                                            row.monto ??
+                                            fila.monto ??
                                             presupuestoCa.presupuesto_estimado ??
                                             presupuestoCa.monto_disponible_clp
                                         )}
                                     />
-                                    <Campo label="Moneda" valor={row.moneda ?? presupuestoCa.moneda ?? "CLP"} />
+                                    <Campo label="Moneda" valor={fila.moneda ?? presupuestoCa.moneda ?? "CLP"} />
                                 </div>
                             </Seccion>
 
-                            {(row.descripcion ?? raw.descripcion) && (
+                            {(fila.descripcion ?? raw.descripcion) && (
                                 <Seccion titulo="Descripción">
                                     <p style={{ margin: 0, color: "var(--text-muted)", fontSize: "0.82rem", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
-                                        {row.descripcion ?? raw.descripcion}
+                                        {fila.descripcion ?? raw.descripcion}
                                     </p>
                                 </Seccion>
                             )}
@@ -472,19 +527,19 @@ export default function MercadoPublicoDetalleModal({ row, modulo, onClose }) {
                                 <div style={grid2}>
                                     <Campo
                                         label="Estado convocatoria"
-                                        valor={row.estadoConvocatoria ?? convocatoriaCa.descripcion}
+                                        valor={fila.estadoConvocatoria ?? convocatoriaCa.descripcion}
                                     />
                                     <Campo
                                         label="Total ofertas recibidas"
-                                        valor={row.totalOfertasRecibidas ?? resumenCa.total_ofertas_recibidas ?? "—"}
+                                        valor={fila.totalOfertasRecibidas ?? resumenCa.total_ofertas_recibidas ?? "—"}
                                     />
                                     <Campo
                                         label="Cierre primer llamado"
-                                        valor={formatFecha(row.fechaCierrePrimerLlamado ?? convocatoriaCa.fecha_cierre_primer_llamado)}
+                                        valor={formatFecha(fila.fechaCierrePrimerLlamado ?? convocatoriaCa.fecha_cierre_primer_llamado)}
                                     />
                                     <Campo
                                         label="Cierre segundo llamado"
-                                        valor={formatFecha(row.fechaCierreSegundoLlamado ?? convocatoriaCa.fecha_cierre_segundo_llamado)}
+                                        valor={formatFecha(fila.fechaCierreSegundoLlamado ?? convocatoriaCa.fecha_cierre_segundo_llamado)}
                                     />
                                 </div>
                             </Seccion>
@@ -493,16 +548,16 @@ export default function MercadoPublicoDetalleModal({ row, modulo, onClose }) {
                                 <div style={grid2}>
                                     <Campo
                                         label="Fecha publicación"
-                                        valor={formatFecha(row.fechaCreacion ?? fechasCa.fecha_publicacion)}
+                                        valor={formatFecha(fila.fechaCreacion ?? fechasCa.fecha_publicacion)}
                                     />
                                     <Campo
                                         label="Fecha cierre"
-                                        valor={formatFecha(row.fechaCierre ?? fechasCa.fecha_cierre)}
+                                        valor={formatFecha(fila.fechaCierre ?? fechasCa.fecha_cierre)}
                                     />
-                                    {(row.fechaCancelacion ?? fechasCa.fecha_cancelacion) && (
+                                    {(fila.fechaCancelacion ?? fechasCa.fecha_cancelacion) && (
                                         <Campo
                                             label="Fecha cancelación"
-                                            valor={formatFecha(row.fechaCancelacion ?? fechasCa.fecha_cancelacion)}
+                                            valor={formatFecha(fila.fechaCancelacion ?? fechasCa.fecha_cancelacion)}
                                         />
                                     )}
                                 </div>
@@ -512,11 +567,11 @@ export default function MercadoPublicoDetalleModal({ row, modulo, onClose }) {
                                 <div style={grid2}>
                                     <Campo
                                         label="Dirección de entrega"
-                                        valor={row.direccionEntrega ?? entregaCa.direccion_entrega}
+                                        valor={fila.direccionEntrega ?? entregaCa.direccion_entrega}
                                     />
                                     <Campo
                                         label="Plazo entrega (días)"
-                                        valor={row.plazoEntregaDias ?? entregaCa.plazo_entrega_dias ?? "—"}
+                                        valor={fila.plazoEntregaDias ?? entregaCa.plazo_entrega_dias ?? "—"}
                                     />
                                 </div>
                             </Seccion>
@@ -525,11 +580,11 @@ export default function MercadoPublicoDetalleModal({ row, modulo, onClose }) {
                                 <div style={grid2}>
                                     <Campo
                                         label="Organismo"
-                                        valor={row.organismo ?? institucionCa.organismo_comprador}
+                                        valor={fila.organismo ?? institucionCa.organismo_comprador}
                                     />
                                     <Campo
                                         label="Región"
-                                        valor={(row.region ?? institucionCa.nombre_region ?? "").trim() || "—"}
+                                        valor={(fila.region ?? institucionCa.nombre_region ?? "").trim() || "—"}
                                     />
                                 </div>
                             </Seccion>
