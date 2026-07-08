@@ -8,15 +8,29 @@ import {
     borrarRegistrosAntiguos,
 } from "@/services/supabase/mercadoPublicoRepo";
 
-function formatearFechaConsulta(fecha) {
-    const dd = String(fecha.getDate()).padStart(2, "0");
-    const mm = String(fecha.getMonth() + 1).padStart(2, "0");
-    const yyyy = fecha.getFullYear();
-    return `${dd}${mm}${yyyy}`;
+const ZONA_CHILE = "America/Santiago";
+
+function partesFechaChile(fecha = new Date()) {
+    const partes = new Intl.DateTimeFormat("en-GB", {
+        timeZone: ZONA_CHILE,
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+    }).formatToParts(fecha);
+
+    const get = (tipo) => partes.find((p) => p.type === tipo)?.value ?? "";
+
+    return {
+        dd: get("day"),
+        mm: get("month"),
+        yyyy: get("year"),
+    };
 }
 
+/** Fecha de hoy en Chile (DDMMAAAA) para API v1 licitaciones / OC */
 function getFechaHoy() {
-    return formatearFechaConsulta(new Date());
+    const { dd, mm, yyyy } = partesFechaChile();
+    return `${dd}${mm}${yyyy}`;
 }
 
 function licitacionSigueVigente(fila) {
@@ -25,16 +39,14 @@ function licitacionSigueVigente(fila) {
 }
 
 function obtenerRangoPublicacion(diasAtras = 7) {
-    const hasta = new Date();
-    const desde = new Date();
-    desde.setDate(hasta.getDate() - diasAtras);
-    desde.setUTCHours(0, 0, 0, 0);
-    hasta.setUTCHours(23, 59, 59, 0);
-    const formatear = (fecha) => fecha.toISOString().replace(/\.\d{3}Z$/, "Z");
-    return {
-        publicado_desde: formatear(desde),
-        publicado_hasta: formatear(hasta),
-    };
+    const hoy = partesFechaChile();
+    const publicado_hasta = `${hoy.yyyy}-${hoy.mm}-${hoy.dd}T23:59:59Z`;
+
+    const desdeMs = Date.now() - diasAtras * 24 * 60 * 60 * 1000;
+    const desde = partesFechaChile(new Date(desdeMs));
+    const publicado_desde = `${desde.yyyy}-${desde.mm}-${desde.dd}T00:00:00Z`;
+
+    return { publicado_desde, publicado_hasta };
 }
 
 function extraerListaCompraAgil(respuestaApi) {
@@ -52,8 +64,8 @@ function extraerListaCompraAgil(respuestaApi) {
 }
 
 const TAMANO_PAGINA_COMPRA_AGIL = 50;
-// la api a veces reporta 200 paginas globales para 7 dias no hace falta recorrer todo eso
-const MAX_PAGINAS_COMPRA_AGIL = 40;
+// cron cada 5 min: pocas páginas por run para no superar timeout de Vercel
+const MAX_PAGINAS_COMPRA_AGIL = 10;
 const PAUSA_ENTRE_PAGINAS_MS = 500;
 
 function esperar(ms) {
@@ -62,9 +74,9 @@ function esperar(ms) {
 
 function compraDentroDeRetencion(fila, diasAtras) {
     if (!fila?.fechaCreacion) return true;
-    const limite = new Date();
-    limite.setDate(limite.getDate() - diasAtras);
-    limite.setHours(0, 0, 0, 0);
+    const desdeMs = Date.now() - diasAtras * 24 * 60 * 60 * 1000;
+    const { yyyy, mm, dd } = partesFechaChile(new Date(desdeMs));
+    const limite = new Date(`${yyyy}-${mm}-${dd}T00:00:00`);
     const creacion = new Date(fila.fechaCreacion);
     if (Number.isNaN(creacion.getTime())) return true;
     return creacion >= limite;
