@@ -30,9 +30,9 @@ export default function MercadoPublicoPage() {
                 </p>
                 <h1 className="text-3xl font-bold text-white">Mercado Público</h1>
                 <p className="mt-2 max-w-3xl text-slate-400">
-                    Al abrir la aplicación se sincronizan licitaciones, órdenes de compra
-                    y compras ágiles desde Mercado Público hacia Supabase. Las vistas
-                    del dashboard leen siempre desde esa base de datos.
+                    Licitaciones, órdenes de compra y compras ágiles se sincronizan
+                    periódicamente hacia Supabase mediante workflows programados.
+                    Las vistas del dashboard leen siempre desde esa base de datos.
                 </p>
             </div>
 

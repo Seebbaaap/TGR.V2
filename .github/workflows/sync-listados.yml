@@ -16,17 +16,62 @@ jobs:
           APP_URL: ${{ secrets.VERCEL_APP_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          echo "=== Sync listados $(date -u +%Y-%m-%dT%H:%M:%SZ) ==="
+          INICIO=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          echo "=== Sync listados ${INICIO} ==="
 
           HTTP_CODE=$(curl -sS -w "%{http_code}" -o response.json \
             "${APP_URL}/api/sync/mercado-publico?secret=${CRON_SECRET}")
 
           echo "HTTP ${HTTP_CODE}"
-          cat response.json
 
           if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
             echo "::error::Sync listados falló (HTTP ${HTTP_CODE})"
+            cat response.json
             exit 1
           fi
 
-          echo "=== Fin sync listados ==="
+          echo ""
+          echo "┌─────────────────────────────────────────────────────────────┐"
+          echo "│ RESUMEN SYNC LISTADOS                                       │"
+          echo "└─────────────────────────────────────────────────────────────┘"
+
+          jq -r '
+            .sincronizados[]? |
+            "",
+            "▸ \(.modulo | ascii_upcase)",
+            "  Upsert/insertadas : \(.insertadas // 0)",
+            "  Eliminadas        : \(.eliminadas // 0)",
+            "  Total en API      : \(.total // 0)",
+            (if .paginasConsultadas then "  Páginas (CA)      : \(.paginasConsultadas)" else empty end),
+            "  Fecha consulta    : \(.fechaUsada // "—")",
+            (if .error then "  ERROR             : \(.error)" else empty end),
+            (if .parcial then "  AVISO             : sync parcial" else empty end)
+          ' response.json
+
+          echo ""
+          jq -r '
+            [.sincronizados[]? | {
+              insertadas: (.insertadas // 0),
+              eliminadas: (.eliminadas // 0)
+            }] |
+            "Totales → Insertadas: \(map(.insertadas) | add // 0)  |  Eliminadas: \(map(.eliminadas) | add // 0)"
+          ' response.json
+
+          {
+            echo "## Sync listados — ${INICIO}"
+            echo ""
+            echo "| Módulo | Insertadas | Eliminadas | Total | Notas |"
+            echo "|--------|------------|------------|-------|-------|"
+            jq -r '
+              .sincronizados[]? |
+              "| \(.modulo) | \(.insertadas // 0) | \(.eliminadas // 0) | \(.total // 0) | " +
+              (if .error then .error elif .parcial then "parcial" elif .paginasConsultadas then "\(.paginasConsultadas) págs" else "OK" end) + " |"
+            ' response.json
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "::group::JSON completo (debug)"
+          jq . response.json
+          echo "::endgroup::"
+
+          echo ""
+          echo "=== Fin sync listados $(date -u +%Y-%m-%dT%H:%M:%SZ) ==="

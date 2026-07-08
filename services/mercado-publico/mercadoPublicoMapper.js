@@ -1,3 +1,5 @@
+import { normalizarRegion } from "@/utils/normalizarRegion";
+
 const ESTADOS_LICITACION = {
     5: "Publicada",
     6: "Cerrada",
@@ -127,10 +129,9 @@ export function mapCompraAgil(item = {}) {
                 typeof organismo === "string"
                     ? organismo
                     : organismo?.nombre ?? "Sin organismo",
-            region:
-                institucion.nombre_region?.trim() ??
-                institucion.region ??
-                "Sin región",
+            region: normalizarRegion(
+                institucion.nombre_region ?? institucion.region
+            ),
             monto:
                 presupuesto.presupuesto_estimado ??
                 presupuesto.monto_disponible_clp ??
@@ -152,7 +153,7 @@ export function mapCompraAgil(item = {}) {
         fechaCreacion: item.FechaCreacion ?? null,
         fechaCierre: item.FechaCierre ?? null,
         organismo: item.NombreOrganismo ?? item.Organismo ?? "Sin organismo",
-        region: item.Region ?? "Sin región",
+        region: normalizarRegion(item.Region),
         monto: item.MontoEstimado ?? item.Monto ?? 0,
         moneda: item.Moneda ?? "CLP",
         descripcion: item.Descripcion ?? null,
