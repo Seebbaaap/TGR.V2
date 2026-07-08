@@ -1,9 +1,14 @@
 name: Sync listados Mercado Público
 
+# Listados: cada hora en :00 UTC (detalle usa otros minutos)
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "0 * * * *"
   workflow_dispatch:
+
+concurrency:
+  group: mercado-publico-api
+  cancel-in-progress: false
 
 jobs:
   sync-listados:
@@ -18,98 +23,41 @@ jobs:
         run: |
           INICIO=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           echo "=== Sync listados ${INICIO} ==="
-          echo "Modo: 3 llamadas secuenciales (evita timeout Vercel)"
-          echo ""
-
           FALLO=0
 
           sync_modulo() {
             local MODULO="$1"
-            local ARCHIVO="response-${MODULO}.json"
-
-            echo "── Sync ${MODULO} ──"
-            local HTTP_CODE
-            HTTP_CODE=$(curl -sS -w "%{http_code}" -o "${ARCHIVO}" \
+            echo "── ${MODULO} ──"
+            HTTP_CODE=$(curl -sS -w "%{http_code}" -o "response-${MODULO}.json" \
               "${APP_URL}/api/sync/mercado-publico?secret=${CRON_SECRET}&modulo=${MODULO}")
-
             echo "HTTP ${HTTP_CODE}"
-
             if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
-              echo "::error::Sync ${MODULO} falló (HTTP ${HTTP_CODE})"
-              cat "${ARCHIVO}" || true
+              echo "::error::${MODULO} falló (HTTP ${HTTP_CODE})"
+              cat "response-${MODULO}.json" || true
               FALLO=1
               return
             fi
-
-            jq -r '
-              .sincronizados[0]? |
-              "  Upsert/insertadas : \(.insertadas // 0)",
-              "  Eliminadas        : \(.eliminadas // 0)",
-              "  Total en API      : \(.total // 0)",
-              (if .paginasConsultadas then "  Páginas (CA)      : \(.paginasConsultadas)" else empty end),
-              "  Fecha consulta    : \(.fechaUsada // "—")",
-              (if .error then "  ERROR             : \(.error)" else "  Estado            : OK" end)
-            ' "${ARCHIVO}" || cat "${ARCHIVO}"
-            echo ""
+            jq -r '.sincronizados[0]? | "insertadas=\(.insertadas // 0) total=\(.total // 0)\(if .error then " ERROR: " + .error else "" end)"' \
+              "response-${MODULO}.json"
           }
 
           sync_modulo "licitaciones"
           sync_modulo "ordenes-compra"
           sync_modulo "compra-agil"
 
-          jq -s '{
-            success: true,
-            sincronizados: [.[].sincronizados[]?]
-          }' response-licitaciones.json response-ordenes-compra.json response-compra-agil.json \
+          jq -s '{ sincronizados: [.[].sincronizados[]?] }' \
+            response-licitaciones.json response-ordenes-compra.json response-compra-agil.json \
             > response.json 2>/dev/null || echo '{"sincronizados":[]}' > response.json
 
-          echo "┌─────────────────────────────────────────────────────────────┐"
-          echo "│ RESUMEN SYNC LISTADOS                                       │"
-          echo "└─────────────────────────────────────────────────────────────┘"
-
-          jq -r '
-            .sincronizados[]? |
-            "",
-            "▸ \(.modulo | ascii_upcase)",
-            "  Upsert/insertadas : \(.insertadas // 0)",
-            "  Eliminadas        : \(.eliminadas // 0)",
-            "  Total en API      : \(.total // 0)",
-            (if .paginasConsultadas then "  Páginas (CA)      : \(.paginasConsultadas)" else empty end),
-            "  Fecha consulta    : \(.fechaUsada // "—")",
-            (if .error then "  ERROR             : \(.error)" else empty end),
-            (if .parcial then "  AVISO             : sync parcial" else empty end)
-          ' response.json
-
           echo ""
-          jq -r '
-            [.sincronizados[]? | {
-              insertadas: (.insertadas // 0),
-              eliminadas: (.eliminadas // 0)
-            }] |
-            "Totales → Insertadas: \(map(.insertadas) | add // 0)  |  Eliminadas: \(map(.eliminadas) | add // 0)"
-          ' response.json
+          jq -r '.sincronizados[]? | "[\(.modulo)] insertadas=\(.insertadas // 0) total=\(.total // 0)"' response.json
+          jq -r '[.sincronizados[]?.insertadas // 0] | add // 0' response.json | xargs -I{} echo "Total insertadas: {}"
 
           {
             echo "## Sync listados — ${INICIO}"
-            echo ""
-            echo "Modo: 3 llamadas secuenciales por módulo"
-            echo ""
-            echo "| Módulo | Insertadas | Eliminadas | Total | Notas |"
-            echo "|--------|------------|------------|-------|-------|"
-            jq -r '
-              .sincronizados[]? |
-              "| \(.modulo) | \(.insertadas // 0) | \(.eliminadas // 0) | \(.total // 0) | " +
-              (if .error then .error elif .parcial then "parcial" elif .paginasConsultadas then "\(.paginasConsultadas) págs" else "OK" end) + " |"
-            ' response.json
+            echo "| Módulo | Insertadas | Total |"
+            echo "|--------|------------|-------|"
+            jq -r '.sincronizados[]? | "| \(.modulo) | \(.insertadas // 0) | \(.total // 0) |"' response.json
           } >> "$GITHUB_STEP_SUMMARY"
 
-          echo "::group::JSON completo (debug)"
-          jq . response.json
-          echo "::endgroup::"
-
-          echo ""
-          echo "=== Fin sync listados $(date -u +%Y-%m-%dT%H:%M:%SZ) ==="
-
-          if [ "$FALLO" -ne 0 ]; then
-            exit 1
-          fi
+          [ "$FALLO" -eq 0 ] || exit 1
