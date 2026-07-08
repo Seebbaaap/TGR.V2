@@ -17,7 +17,7 @@ export async function POST(request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const limite = Math.min(Number(searchParams.get("limite")) || 3, 10);
+    const limite = Math.min(Number(searchParams.get("limite")) || 3, 15);
     const pausaMs = Math.min(Number(searchParams.get("pausaMs")) || 10000, 30000);
 
     try {

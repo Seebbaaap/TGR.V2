@@ -8,29 +8,73 @@ on:
 jobs:
   sync-detalle:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Enriquecer detalles pendientes
         env:
           APP_URL: ${{ secrets.VERCEL_APP_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          LIMITE: "12"
+          PAUSA_MS: "10000"
         run: |
-          echo "=== Enriquecer detalle $(date -u +%Y-%m-%dT%H:%M:%SZ) ==="
+          INICIO=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          echo "=== Enriquecer detalle ${INICIO} ==="
+          echo "Parámetros → limite=${LIMITE}, pausaMs=${PAUSA_MS}"
 
           HTTP_CODE=$(curl -sS -w "%{http_code}" -o response.json \
-            "${APP_URL}/api/sync/enriquecer-detalle?secret=${CRON_SECRET}&limite=3&pausaMs=10000")
+            "${APP_URL}/api/sync/enriquecer-detalle?secret=${CRON_SECRET}&limite=${LIMITE}&pausaMs=${PAUSA_MS}")
 
           echo "HTTP ${HTTP_CODE}"
-          cat response.json
-
-          if command -v jq >/dev/null 2>&1; then
-            jq -r '.procesados[]? | "[\(.modulo)] \(.codigo) listado=\(.listado) detalle=\(.detalle)\(if .error then " ERROR: " + .error else "" end)"' response.json || true
-          fi
 
           if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
             echo "::error::Enriquecer detalle falló (HTTP ${HTTP_CODE})"
+            cat response.json
             exit 1
           fi
 
-          echo "=== Fin enriquecer detalle ==="
+          echo ""
+          echo "┌─────────────────────────────────────────────────────────────┐"
+          echo "│ RESUMEN ENRIQUECER DETALLE                                  │"
+          echo "└─────────────────────────────────────────────────────────────┘"
+          echo ""
+          echo "Registros procesados: $(jq -r '.total // 0' response.json)"
+          echo ""
+
+          jq -r '
+            .procesados[]? |
+            if .ok then
+              "  ✓ [\(.modulo)] \(.codigo)  detalle=\(.detalle)  listado=\(.listado)"
+            else
+              "  ✗ [\(.modulo)] \(.codigo)  ERROR: \(.error // "desconocido")"
+            end
+          ' response.json
+
+          echo ""
+          jq -r '
+            [.procesados[]? | .detalle] |
+            "Conteo → actualizado: \([.[] | select(. == "actualizado")] | length)  " +
+            "ya_tenia: \([.[] | select(. == "ya_tenia")] | length)  " +
+            "sin_cambio: \([.[] | select(. == "sin_cambio")] | length)  " +
+            "error: \([.[] | select(. == "error")] | length)"
+          ' response.json
+
+          {
+            echo "## Enriquecer detalle — ${INICIO}"
+            echo ""
+            echo "Límite: ${LIMITE} · Pausa: ${PAUSA_MS}ms"
+            echo ""
+            echo "| Módulo | Código | Detalle | Listado | OK |"
+            echo "|--------|--------|---------|---------|-----|"
+            jq -r '
+              .procesados[]? |
+              "| \(.modulo) | \(.codigo) | \(.detalle) | \(.listado) | \(if .ok then "✓" else "✗" end) |"
+            ' response.json
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "::group::JSON completo (debug)"
+          jq . response.json
+          echo "::endgroup::"
+
+          echo ""
+          echo "=== Fin enriquecer detalle $(date -u +%Y-%m-%dT%H:%M:%SZ) ==="

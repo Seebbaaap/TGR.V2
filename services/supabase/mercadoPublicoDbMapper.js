@@ -1,3 +1,5 @@
+import { normalizarRegion } from "@/utils/normalizarRegion";
+
 function aFechaIso(valor) {
     if (!valor) return null;
     const normalizado = String(valor).replace(" ", "T");
@@ -27,6 +29,7 @@ export function licitacionUiADb(fila) {
         sincronizado_en: new Date().toISOString(),
     };
 }
+
 export function licitacionDbAUi(row) {
     return {
         id: row.codigo,
@@ -128,7 +131,7 @@ export function compraAgilUiADb(fila) {
         nombre: fila.nombre ?? null,
         estado: fila.estado ?? null,
         organismo: fila.organismo ?? null,
-        region: fila.region ?? null,
+        region: normalizarRegion(fila.region, { fallback: null }),
         monto: fila.monto ?? 0,
         moneda: fila.moneda ?? "CLP",
         fecha_cierre: aFechaIso(fila.fechaCierre),
@@ -154,7 +157,7 @@ export function compraAgilDbAUi(row) {
         nombre: row.nombre ?? "Sin nombre",
         estado: row.estado ?? "Sin estado",
         organismo: row.organismo ?? "Sin organismo",
-        region: row.region ?? "Sin región",
+        region: normalizarRegion(row.region),
         monto: row.monto ?? 0,
         moneda: row.moneda ?? "CLP",
         fechaCierre: row.fecha_cierre,

@@ -73,22 +73,14 @@ function EstadoBadge({ estado }) {
 }
 
 export default function LicitacionesVisualizer() {
-    const { data, loading, error, total, sincronizando, mensajeSync, errorSync } = useMercadoPublico("licitaciones");
+    const { data, loading, error, total } = useMercadoPublico("licitaciones");
 
     const [busqueda, setBusqueda] = useState("");
     const [estadoFiltro, setEstadoFiltro] = useState("");
     const [orden, setOrden] = useState("");
     const [detalleAbierto, setDetalleAbierto] = useState(null);
-    const [parches, setParches] = useState({});
 
-    const dataActualizada = useMemo(
-        () => data.map((r) => (parches[r.codigo] ? { ...r, ...parches[r.codigo] } : r)),
-        [data, parches]
-    );
-
-    function onDetalleCargado(fila) {
-        setParches((prev) => ({ ...prev, [fila.codigo]: fila }));
-    }
+    const dataActualizada = data;
 
     const estados = useMemo(() => {
         const values = dataActualizada.map((d) => d.estado).filter(Boolean);
@@ -258,14 +250,7 @@ export default function LicitacionesVisualizer() {
                     </div>
                 ))}
             </div>
-            <AvisoDesdeDb
-                visible
-                sincronizando={sincronizando}
-                mensajeSync={mensajeSync}
-                hayFilas={data.length > 0}
-                error={error}
-                errorSync={errorSync}
-            />
+            <AvisoDesdeDb visible loading={loading} hayFilas={data.length > 0} error={error} />
 
             {!loading && (
                 <div
@@ -381,7 +366,7 @@ export default function LicitacionesVisualizer() {
                     <p style={{ margin: 0, fontSize: "0.84rem" }}>
                         {busqueda || estadoFiltro
                             ? "No hay registros que coincidan con los filtros aplicados."
-                            : "No hay licitaciones en Supabase. Espera a que termine la sincronización."}
+                            : "No hay licitaciones en Supabase todavía."}
                     </p>
                 </div>
             ) : (
@@ -396,10 +381,9 @@ export default function LicitacionesVisualizer() {
 
             {detalleAbierto && (
                 <MercadoPublicoDetalleModal
-                    row={parches[detalleAbierto.codigo] ?? detalleAbierto}
+                    row={detalleAbierto}
                     modulo="licitaciones"
                     onClose={() => setDetalleAbierto(null)}
-                    onDetalleCargado={onDetalleCargado}
                 />
             )}
         </section>
