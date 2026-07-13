@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import TablaSwipeHint from "@/components/shared/TablaSwipeHint";
 
 export default function MercadoPublicoTable({
     columns = [],
@@ -28,22 +29,39 @@ export default function MercadoPublicoTable({
         background: "transparent",
         cursor: "pointer",
         textDecoration: "none",
+        whiteSpace: "nowrap",
+    };
+
+    const stickyAcciones = {
+        position: "sticky",
+        right: 0,
+        zIndex: 1,
+        background: "var(--surface)",
+        boxShadow: "-8px 0 12px -12px rgba(0,0,0,0.45)",
     };
 
     return (
-        <div>
+        <div className="min-w-0">
             <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: "0.5rem" }}>
                 {rows.length} {labelPlural} · Página {pagina} de {totalPaginas}
             </p>
 
-            <div style={{
-                borderRadius: "0.75rem",
-                border: "1px solid var(--border)",
-                overflow: "hidden",
-                background: "var(--surface)",
-            }}>
-                <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+            <TablaSwipeHint />
+
+            <div
+                className="overflow-hidden rounded-xl"
+                style={{
+                    border: "1px solid var(--border)",
+                    background: "var(--surface)",
+                }}
+            >
+                <div className="overflow-x-auto">
+                    <table style={{
+                        width: "100%",
+                        minWidth: "720px",
+                        borderCollapse: "collapse",
+                        fontSize: "0.82rem",
+                    }}>
                         <thead>
                             <tr style={{ background: "var(--surface-2)" }}>
                                 {columns.map((col) => (
@@ -70,6 +88,8 @@ export default function MercadoPublicoTable({
                                     textTransform: "uppercase",
                                     color: "var(--accent)",
                                     borderBottom: "1px solid var(--border)",
+                                    ...stickyAcciones,
+                                    background: "var(--surface-2)",
                                 }}>
                                     Acciones
                                 </th>
@@ -87,35 +107,46 @@ export default function MercadoPublicoTable({
                                     </td>
                                 </tr>
                             ) : (
-                                visibles.map((row, index) => (
-                                    <tr key={row.id ?? row.codigo ?? index} style={{
-                                        borderTop: "1px solid var(--border)",
-                                        background: index % 2 === 0 ? "transparent" : "color-mix(in srgb, var(--surface-2) 40%, transparent)",
-                                    }}>
-                                        {columns.map((col) => (
-                                            <td key={col.key} style={{
+                                visibles.map((row, index) => {
+                                    const rowBg = index % 2 === 0
+                                        ? "var(--surface)"
+                                        : "color-mix(in srgb, var(--surface-2) 40%, var(--surface))";
+                                    return (
+                                        <tr key={row.id ?? row.codigo ?? index} style={{
+                                            borderTop: "1px solid var(--border)",
+                                            background: rowBg,
+                                        }}>
+                                            {columns.map((col) => (
+                                                <td key={col.key} style={{
+                                                    padding: "0.65rem 1rem",
+                                                    color: "var(--text-secondary)",
+                                                    verticalAlign: "middle",
+                                                    maxWidth: col.maxWidth,
+                                                }}>
+                                                    {col.render ? col.render(row) : (row[col.key] ?? "—")}
+                                                </td>
+                                            ))}
+                                            <td style={{
                                                 padding: "0.65rem 1rem",
-                                                color: "var(--text-secondary)",
-                                                verticalAlign: "middle",
+                                                textAlign: "right",
+                                                ...stickyAcciones,
+                                                background: rowBg,
                                             }}>
-                                                {col.render ? col.render(row) : (row[col.key] ?? "—")}
+                                                {onVerDetalle ? (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => onVerDetalle(row)}
+                                                        style={estiloVer}
+                                                    >
+                                                        Ver ›
+                                                    </button>
+                                                ) : (
+                                                    <span style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>—</span>
+                                                )}
                                             </td>
-                                        ))}
-                                        <td style={{ padding: "0.65rem 1rem", textAlign: "right" }}>
-                                            {onVerDetalle ? (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => onVerDetalle(row)}
-                                                    style={estiloVer}
-                                                >
-                                                    Ver ›
-                                                </button>
-                                            ) : (
-                                                <span style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>—</span>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))
+                                        </tr>
+                                    );
+                                })
                             )}
                         </tbody>
                     </table>
@@ -123,13 +154,7 @@ export default function MercadoPublicoTable({
             </div>
 
             {totalPaginas > 1 && (
-                <div style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginTop: "0.75rem",
-                    padding: "0.5rem 0",
-                }}>
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 py-2">
                     <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
                         Página {pagina} de {totalPaginas}
                     </span>

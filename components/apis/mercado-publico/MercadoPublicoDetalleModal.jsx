@@ -6,7 +6,7 @@ import { tieneDetalleEnPayload } from "@/services/mercado-publico/mercadoPublico
 
 function Campo({ label, valor }) {
     return (
-        <div>
+        <div className="min-w-0">
             <p style={{
                 color: "var(--text-muted)",
                 fontSize: "0.65rem",
@@ -16,7 +16,7 @@ function Campo({ label, valor }) {
             }}>
                 {label}
             </p>
-            <p style={{ color: "var(--text-secondary)", fontWeight: 600, fontSize: "0.85rem" }}>
+            <p className="break-words" style={{ color: "var(--text-secondary)", fontWeight: 600, fontSize: "0.85rem" }}>
                 {valor ?? "—"}
             </p>
         </div>
@@ -30,6 +30,7 @@ function Seccion({ titulo, children }) {
             border: "1px solid var(--border)",
             borderRadius: "12px",
             padding: "1rem",
+            minWidth: 0,
         }}>
             <p style={{
                 margin: 0,
@@ -46,12 +47,6 @@ function Seccion({ titulo, children }) {
         </div>
     );
 }
-
-const grid2 = {
-    display: "grid",
-    gridTemplateColumns: "repeat(2, 1fr)",
-    gap: "1rem",
-};
 
 function formatMoney(value) {
     const amount = Number(value || 0);
@@ -251,44 +246,40 @@ export default function MercadoPublicoDetalleModal({ row, modulo, onClose, onDet
                 }}
             />
             <div
+                className="fixed left-1/2 top-1/2 z-[51] flex w-[min(760px,95vw)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[18px]"
                 style={{
-                    position: "fixed",
-                    top: "50%",
-                    left: "50%",
-                    transform: "translate(-50%, -50%)",
-                    width: "min(760px, 95vw)",
-                    maxHeight: "92vh",
-                    overflowY: "auto",
+                    maxHeight: "92dvh",
                     background: "var(--surface)",
                     border: "1px solid var(--border)",
-                    borderRadius: "18px",
                     boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
-                    zIndex: 51,
                 }}
             >
-                <div style={{
-                    padding: "1.2rem 1.5rem",
-                    borderBottom: "1px solid var(--border)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    background: "var(--surface-2)",
-                    borderRadius: "18px 18px 0 0",
-                }}>
-                    <div>
+                <div
+                    className="flex shrink-0 items-start justify-between gap-3 px-4 py-3 sm:px-6 sm:py-5"
+                    style={{
+                        borderBottom: "1px solid var(--border)",
+                        background: "var(--surface-2)",
+                    }}
+                >
+                    <div className="min-w-0">
                         <p style={{ margin: 0, color: "var(--text-muted)", fontSize: "0.7rem", fontFamily: "monospace", letterSpacing: "0.05em" }}>
                             {TITULOS[modulo] ?? "Detalle"}
                         </p>
-                        <p style={{ margin: 0, marginTop: "4px", color: "var(--accent)", fontSize: "0.8rem", fontFamily: "monospace" }}>
+                        <p className="truncate" style={{ margin: 0, marginTop: "4px", color: "var(--accent)", fontSize: "0.8rem", fontFamily: "monospace" }} title={codigo}>
                             {codigo}
                         </p>
                     </div>
-                    <button onClick={onClose} style={{ color: "var(--text-muted)", background: "none", border: "none", cursor: "pointer", padding: "4px" }}>
+                    <button
+                        onClick={onClose}
+                        aria-label="Cerrar"
+                        className="shrink-0"
+                        style={{ color: "var(--text-muted)", background: "none", border: "none", cursor: "pointer", padding: "4px" }}
+                    >
                         <X size={18} />
                     </button>
                 </div>
 
-                <div style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4 sm:p-6">
                     {cargando && (
                         <p style={{ margin: 0, color: "var(--text-muted)", fontSize: "0.82rem" }}>
                             Cargando detalle desde Mercado Público…
@@ -305,7 +296,7 @@ export default function MercadoPublicoDetalleModal({ row, modulo, onClose, onDet
                         </p>
                     )}
 
-                    <h2 style={{ margin: 0, color: "var(--text-secondary)", fontSize: "1.2rem", fontWeight: 800, lineHeight: 1.3 }}>
+                    <h2 className="break-words text-lg font-extrabold leading-snug sm:text-xl" style={{ margin: 0, color: "var(--text-secondary)" }}>
                         {titulo}
                     </h2>
 
@@ -314,7 +305,7 @@ export default function MercadoPublicoDetalleModal({ row, modulo, onClose, onDet
                     {modulo === "licitaciones" && (
                         <>
                             <Seccion titulo="Identificación">
-                                <div style={grid2}>
+                                <div className="modal-grid-2">
                                     <Campo label="Código externo" valor={fila.codigo ?? raw.CodigoExterno} />
                                     <Campo label="Estado" valor={fila.estado ?? raw.Estado} />
                                     <Campo label="Monto estimado" valor={formatMoney(fila.montoEstimado ?? raw.MontoEstimado)} />
@@ -331,7 +322,7 @@ export default function MercadoPublicoDetalleModal({ row, modulo, onClose, onDet
                             )}
 
                             <Seccion titulo="Organismo comprador">
-                                <div style={grid2}>
+                                <div className="modal-grid-2">
                                     <Campo label="Nombre organismo" valor={fila.organismo ?? raw.Comprador?.NombreOrganismo} />
                                     <Campo label="Nombre unidad" valor={fila.nombreUnidad ?? raw.Comprador?.NombreUnidad} />
                                     <Campo label="Dirección unidad" valor={fila.direccionUnidad ?? raw.Comprador?.DireccionUnidad} />
@@ -340,7 +331,7 @@ export default function MercadoPublicoDetalleModal({ row, modulo, onClose, onDet
                             </Seccion>
 
                             <Seccion titulo="Plazos y reclamos">
-                                <div style={grid2}>
+                                <div className="modal-grid-2">
                                     <Campo label="Fecha inicio" valor={formatFecha(fila.fechaInicio ?? raw.Fechas?.FechaInicio)} />
                                     <Campo label="Fecha final" valor={formatFecha(fila.fechaFinal ?? raw.Fechas?.FechaFinal)} />
                                     <Campo label="Fecha cierre" valor={formatFecha(fila.fechaCierre ?? raw.Fechas?.FechaCierre ?? raw.FechaCierre)} />
@@ -402,7 +393,7 @@ export default function MercadoPublicoDetalleModal({ row, modulo, onClose, onDet
                     {modulo === "ordenes-compra" && (
                         <>
                             <Seccion titulo="Identificación">
-                                <div style={grid2}>
+                                <div className="modal-grid-2">
                                     <Campo label="Código" valor={fila.codigo ?? raw.Codigo} />
                                     <Campo label="Estado" valor={fila.estado ?? raw.Estado} />
                                     <Campo label="Código licitación" valor={fila.codigoLicitacion ?? raw.CodigoLicitacion} />
@@ -421,7 +412,7 @@ export default function MercadoPublicoDetalleModal({ row, modulo, onClose, onDet
                             )}
 
                             <Seccion titulo="Comprador">
-                                <div style={grid2}>
+                                <div className="modal-grid-2">
                                     <Campo label="Nombre organismo" valor={fila.comprador ?? raw.Comprador?.NombreOrganismo} />
                                     <Campo label="Nombre unidad" valor={fila.nombreUnidad ?? raw.Comprador?.NombreUnidad} />
                                     <Campo label="Actividad" valor={fila.actividadComprador ?? raw.Comprador?.Actividad} />
@@ -432,7 +423,7 @@ export default function MercadoPublicoDetalleModal({ row, modulo, onClose, onDet
                             </Seccion>
 
                             <Seccion titulo="Proveedor">
-                                <div style={grid2}>
+                                <div className="modal-grid-2">
                                     <Campo label="Nombre" valor={fila.proveedor ?? raw.Proveedor?.Nombre} />
                                     <Campo label="Actividad" valor={fila.actividadProveedor ?? raw.Proveedor?.Actividad} />
                                     <Campo label="Dirección" valor={fila.direccionProveedor ?? raw.Proveedor?.Direccion} />
@@ -500,7 +491,7 @@ export default function MercadoPublicoDetalleModal({ row, modulo, onClose, onDet
                     {modulo === "compra-agil" && (
                         <>
                             <Seccion titulo="Identificación">
-                                <div style={grid2}>
+                                <div className="modal-grid-2">
                                     <Campo label="Código" valor={fila.codigo ?? raw.codigo} />
                                     <Campo label="Estado" valor={fila.estado ?? raw.estado?.glosa ?? raw.estado?.codigo} />
                                     <Campo
@@ -524,7 +515,7 @@ export default function MercadoPublicoDetalleModal({ row, modulo, onClose, onDet
                             )}
 
                             <Seccion titulo="Convocatoria">
-                                <div style={grid2}>
+                                <div className="modal-grid-2">
                                     <Campo
                                         label="Estado convocatoria"
                                         valor={fila.estadoConvocatoria ?? convocatoriaCa.descripcion}
@@ -545,7 +536,7 @@ export default function MercadoPublicoDetalleModal({ row, modulo, onClose, onDet
                             </Seccion>
 
                             <Seccion titulo="Fechas">
-                                <div style={grid2}>
+                                <div className="modal-grid-2">
                                     <Campo
                                         label="Fecha publicación"
                                         valor={formatFecha(fila.fechaCreacion ?? fechasCa.fecha_publicacion)}
@@ -564,7 +555,7 @@ export default function MercadoPublicoDetalleModal({ row, modulo, onClose, onDet
                             </Seccion>
 
                             <Seccion titulo="Entrega">
-                                <div style={grid2}>
+                                <div className="modal-grid-2">
                                     <Campo
                                         label="Dirección de entrega"
                                         valor={fila.direccionEntrega ?? entregaCa.direccion_entrega}
@@ -577,7 +568,7 @@ export default function MercadoPublicoDetalleModal({ row, modulo, onClose, onDet
                             </Seccion>
 
                             <Seccion titulo="Organismo comprador">
-                                <div style={grid2}>
+                                <div className="modal-grid-2">
                                     <Campo
                                         label="Organismo"
                                         valor={fila.organismo ?? institucionCa.organismo_comprador}

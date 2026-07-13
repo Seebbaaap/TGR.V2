@@ -6,7 +6,7 @@ import { formatDate } from "@/utils/formatDate";
 
 function Campo({ label, valor, accentColor }) {
     return (
-        <div>
+        <div className="min-w-0">
             <p
                 style={{
                     color: "var(--text-muted)",
@@ -19,6 +19,7 @@ function Campo({ label, valor, accentColor }) {
                 {label}
             </p>
             <p
+                className="break-words"
                 style={{
                     color: accentColor ?? "var(--text-secondary)",
                     fontWeight: 600,
@@ -324,35 +325,22 @@ export default function FichaTecnicaModal({ remate, onClose }) {
             />
 
             <div
+                className="fixed left-1/2 top-1/2 z-[51] flex w-[min(760px,95vw)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[18px]"
                 style={{
-                    position: "fixed",
-                    top: "50%",
-                    left: "50%",
-                    transform: "translate(-50%, -50%)",
-                    width: "min(760px, 95vw)",
-                    maxHeight: "92vh",
-                    overflowY: "auto",
+                    maxHeight: "92dvh",
                     background: "var(--surface)",
                     border: "1px solid var(--border)",
-                    borderRadius: "18px",
                     boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
-                    zIndex: 51,
                 }}
             >
                 <div
+                    className="flex shrink-0 flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-5"
                     style={{
-                        padding: "1.2rem 1.5rem",
                         borderBottom: "1px solid var(--border)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: "1rem",
                         background: "var(--surface-2)",
-                        borderRadius: "18px 18px 0 0",
-                        flexWrap: "wrap",
                     }}
                 >
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
                         <p
                             style={{
                                 color: "var(--text-muted)",
@@ -366,6 +354,7 @@ export default function FichaTecnicaModal({ remate, onClose }) {
 
                         {expediente && (
                             <span
+                                className="max-w-full truncate"
                                 style={{
                                     background: "var(--surface)",
                                     border: "1px solid var(--border)",
@@ -375,6 +364,7 @@ export default function FichaTecnicaModal({ remate, onClose }) {
                                     fontSize: "0.7rem",
                                     fontFamily: "monospace",
                                 }}
+                                title={expediente}
                             >
                                 {expediente}
                             </span>
@@ -409,6 +399,8 @@ export default function FichaTecnicaModal({ remate, onClose }) {
 
                     <button
                         onClick={onClose}
+                        aria-label="Cerrar"
+                        className="shrink-0"
                         style={{
                             color: "var(--text-muted)",
                             background: "none",
@@ -421,16 +413,11 @@ export default function FichaTecnicaModal({ remate, onClose }) {
                     </button>
                 </div>
 
-                <div style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-                    <div>
+                <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6" style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                    <div className="min-w-0">
                         <h2
-                            style={{
-                                color: "var(--success)",
-                                fontSize: "1.8rem",
-                                fontWeight: 800,
-                                lineHeight: 1.2,
-                                textTransform: "uppercase",
-                            }}
+                            className="text-base font-extrabold uppercase leading-snug break-words sm:text-2xl lg:text-3xl"
+                            style={{ color: "var(--success)" }}
                         >
                             {direccion}
                         </h2>
@@ -440,40 +427,35 @@ export default function FichaTecnicaModal({ remate, onClose }) {
                     </div>
 
                     <div
-                        style={{
-                            display: "grid",
-                            gridTemplateColumns: "repeat(3, 1fr)",
-                            border: "1px solid var(--border)",
-                            borderRadius: "12px",
-                            overflow: "hidden",
-                        }}
+                        className="modal-grid-3 overflow-hidden rounded-xl"
+                        style={{ border: "1px solid var(--border)" }}
                     >
-                        <div style={{ padding: "1rem", borderRight: "1px solid var(--border)" }}>
+                        <div className="border-b border-[var(--border)] p-4 sm:border-b-0 sm:border-r">
                             <p style={{ color: "var(--text-muted)", fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "6px" }}>
                                 Valor de referencia
                             </p>
-                            <p style={{ color: "var(--text-secondary)", fontSize: "1.05rem", fontWeight: 700, fontFamily: "monospace" }}>
+                            <p className="break-all font-mono text-base font-bold sm:text-[1.05rem]" style={{ color: "var(--text-secondary)" }}>
                                 {montoAvaluo ? formatCLP(montoAvaluo) : "—"}
                             </p>
                         </div>
 
-                        <div style={{ padding: "1rem", borderRight: "1px solid var(--border)" }}>
+                        <div className="border-b border-[var(--border)] p-4 sm:border-b-0 sm:border-r">
                             <p style={{ color: "var(--text-muted)", fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "6px" }}>
                                 ▲ Tasación mínima
                             </p>
-                            <p style={{ color: "var(--success)", fontSize: "1.05rem", fontWeight: 700, fontFamily: "monospace" }}>
+                            <p className="break-all font-mono text-base font-bold sm:text-[1.05rem]" style={{ color: "var(--success)" }}>
                                 {montoMinimo ? formatCLP(montoMinimo) : "—"}
                             </p>
                         </div>
 
-                        <div style={{ padding: "1rem" }}>
+                        <div className="p-4">
                             <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
                                 <Calendar size={11} style={{ color: "var(--accent)" }} />
                                 <p style={{ color: "var(--text-muted)", fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                                     Fecha del remate
                                 </p>
                             </div>
-                            <p style={{ color: "var(--accent)", fontSize: "1.05rem", fontWeight: 800, fontFamily: "monospace" }}>
+                            <p className="font-mono text-base font-extrabold sm:text-[1.05rem]" style={{ color: "var(--accent)" }}>
                                 {fechaRemate ? formatDate(fechaRemate) : "—"}
                             </p>
                             <p style={{ color: "var(--accent)", fontSize: "0.85rem", fontWeight: 600 }}>
@@ -482,7 +464,7 @@ export default function FichaTecnicaModal({ remate, onClose }) {
                         </div>
                     </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                    <div className="modal-grid-2">
                         <div
                             style={{
                                 background: "var(--surface-2)",
@@ -492,6 +474,7 @@ export default function FichaTecnicaModal({ remate, onClose }) {
                                 display: "flex",
                                 flexDirection: "column",
                                 gap: "0.75rem",
+                                minWidth: 0,
                             }}
                         >
                             <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
@@ -516,6 +499,7 @@ export default function FichaTecnicaModal({ remate, onClose }) {
                                 display: "flex",
                                 flexDirection: "column",
                                 gap: "0.75rem",
+                                minWidth: 0,
                             }}
                         >
                             <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
@@ -567,7 +551,7 @@ export default function FichaTecnicaModal({ remate, onClose }) {
                             </p>
                         </div>
 
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
+                        <div className="modal-grid-3">
                             <Campo label="Desde" valor={periodoDesde} />
                             <Campo label="Hasta" valor={periodoHasta} />
                             <Campo label="Extensión" valor={extension} />
@@ -596,23 +580,17 @@ export default function FichaTecnicaModal({ remate, onClose }) {
                 </div>
 
                 <div
+                    className="flex shrink-0 flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6"
                     style={{
-                        padding: "1rem 1.5rem",
                         borderTop: "1px solid var(--border)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
                         background: "var(--surface-2)",
-                        borderRadius: "0 0 18px 18px",
-                        flexWrap: "wrap",
-                        gap: "0.75rem",
                     }}
                 >
                     <p style={{ color: "var(--text-muted)", fontSize: "0.7rem", fontFamily: "monospace" }}>
                         ⊙ Fuente: TGR · actualizado hoy
                     </p>
 
-                    <div style={{ display: "flex", gap: "0.75rem" }}>
+                    <div className="flex flex-wrap gap-3">
                         <a
                             href="https://remates.tgr.cl/"
                             target="_blank"

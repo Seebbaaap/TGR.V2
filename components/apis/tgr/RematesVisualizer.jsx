@@ -13,6 +13,7 @@ import {
 import BotonesExportar from "@/components/shared/BotonesExportar";
 import FichaTecnicaModal from "@/components/apis/tgr/FichaTecnicaModal";
 import GraficoConcentracion from "@/components/apis/tgr/GraficoConcentracion";
+import TablaSwipeHint from "@/components/shared/TablaSwipeHint";
 import { formatCLP, formatCLPCompacto } from "@/utils/formatCurrency";
 
 const POR_PAGINA = 5;
@@ -20,44 +21,33 @@ const POR_PAGINA = 5;
 // ── KPI Card ──────────────────────────────────────────────────────────────────
 function KpiGrande({ icono: Icono, titulo, valor, color }) {
     return (
-        <div style={{
-            background: "var(--surface)",
-            border: "1px solid var(--border)",
-            borderRadius: "12px",
-            padding: "1.1rem 1.25rem",
-            display: "flex",
-            alignItems: "center",
-            gap: "0.875rem",
-        }}>
-            <div style={{
-                background: `color-mix(in srgb, ${color} 12%, transparent)`,
-                border: `1px solid color-mix(in srgb, ${color} 30%, transparent)`,
-                borderRadius: "10px",
-                padding: "0.6rem",
-                flexShrink: 0,
-            }}>
+        <div className="kpi-tgr">
+            <div
+                className="kpi-tgr-icon"
+                style={{
+                    background: `color-mix(in srgb, ${color} 12%, transparent)`,
+                    border: `1px solid color-mix(in srgb, ${color} 30%, transparent)`,
+                }}
+            >
                 <Icono size={18} style={{ color }} />
             </div>
-            <div>
-                <p style={{
-                    color: "var(--text-muted)",
-                    fontSize: "0.65rem",
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    marginBottom: "2px",
-                }}>
-                    {titulo}
-                </p>
-                <p style={{
-                    color,
-                    fontSize: "1.25rem",
-                    fontWeight: 800,
-                    fontFamily: "monospace",
-                }}>
-                    {valor}
-                </p>
+            <div style={{ minWidth: 0, width: "100%" }}>
+                <p className="kpi-tgr-label">{titulo}</p>
+                <p className="kpi-tgr-value" style={{ color }}>{valor}</p>
             </div>
         </div>
+    );
+}
+
+function CeldaTruncada({ children, title, maxWidth = "220px" }) {
+    return (
+        <span
+            title={title}
+            className="block min-w-0 truncate"
+            style={{ maxWidth }}
+        >
+            {children}
+        </span>
     );
 }
 
@@ -136,28 +126,36 @@ export default function RematesVisualizer({ datos = [] }) {
         {
             key: "nombreDuegno",
             label: "Deudor",
-            render: (v) => (
-                <span style={{
-                    fontFamily: "monospace",
-                    fontWeight: 600,
-                    fontSize: "0.78rem",
-                    color: "var(--text-secondary)",
-                }}>
-                    {v ? v.substring(0, 28) + (v.length > 28 ? "..." : "") : "—"}
-                </span>
-            ),
+            maxWidth: "180px",
+            render: (v) => {
+                const texto = v || "—";
+                return (
+                    <CeldaTruncada title={v || undefined} maxWidth="180px">
+                        <span style={{
+                            fontFamily: "monospace",
+                            fontWeight: 600,
+                            fontSize: "0.78rem",
+                            color: "var(--text-secondary)",
+                        }}>
+                            {texto}
+                        </span>
+                    </CeldaTruncada>
+                );
+            },
         },
         {
             key: "direccionRol",
             label: "Ubicación",
+            maxWidth: "260px",
             render: (v) => (
-                <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
-                    {v ?? "—"}
-                </span>
+                <CeldaTruncada title={v || undefined} maxWidth="260px">
+                    <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+                        {v ?? "—"}
+                    </span>
+                </CeldaTruncada>
             ),
         },
         {
-            // Columna usa montoMinimo como valor principal, cae a montoAvaluo
             key: "montoMinimo",
             label: "Tasación",
             render: (v, fila) => {
@@ -168,6 +166,7 @@ export default function RematesVisualizer({ datos = [] }) {
                         fontFamily: "monospace",
                         fontWeight: 700,
                         fontSize: "0.8rem",
+                        whiteSpace: "nowrap",
                     }}>
                         {monto ? formatCLP(monto) : "—"}
                     </span>
@@ -177,6 +176,7 @@ export default function RematesVisualizer({ datos = [] }) {
         {
             key: "_accion",
             label: "Acciones",
+            sticky: true,
             render: (_, fila) => (
                 <button
                     onClick={() => setFichaAbierta(fila)}
@@ -189,9 +189,10 @@ export default function RematesVisualizer({ datos = [] }) {
                         fontSize: "0.75rem",
                         fontFamily: "monospace",
                         cursor: "pointer",
-                        display: "flex",
+                        display: "inline-flex",
                         alignItems: "center",
                         gap: "4px",
+                        whiteSpace: "nowrap",
                     }}
                 >
                     Ver →
@@ -202,10 +203,10 @@ export default function RematesVisualizer({ datos = [] }) {
 
     // ── Render ────────────────────────────────────────────────────────────────
     return (
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+        <div className="flex min-w-0 flex-col gap-5 sm:gap-6">
 
             {/* KPIs */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem" }}>
+            <div className="kpi-grid kpi-grid--4">
                 <KpiGrande
                     icono={Building2}
                     titulo="Propiedades Únicas"
@@ -233,18 +234,14 @@ export default function RematesVisualizer({ datos = [] }) {
             </div>
 
             {/* Filtros */}
-            <div style={{
-                background: "var(--surface)",
-                border: "1px solid var(--border)",
-                borderRadius: "12px",
-                padding: "1rem",
-                display: "flex",
-                gap: "0.75rem",
-                flexWrap: "wrap",
-                alignItems: "center",
-            }}>
-                {/* Búsqueda */}
-                <div style={{ flex: 1, minWidth: "220px", position: "relative" }}>
+            <div
+                className="flex flex-wrap items-center gap-2.5 rounded-xl p-3.5 sm:gap-3 sm:p-4"
+                style={{
+                    background: "var(--surface)",
+                    border: "1px solid var(--border)",
+                }}
+            >
+                <div className="relative min-w-0 flex-1 basis-full sm:basis-56 sm:min-w-[220px]">
                     <Search size={14} style={{
                         position: "absolute", left: "10px", top: "50%",
                         transform: "translateY(-50%)", color: "var(--accent)",
@@ -268,8 +265,7 @@ export default function RematesVisualizer({ datos = [] }) {
                     />
                 </div>
 
-                {/* Selector de comuna */}
-                <div style={{ position: "relative", minWidth: "200px" }}>
+                <div className="relative min-w-0 flex-1 basis-full sm:basis-44 sm:min-w-[160px] sm:max-w-xs">
                     <Filter size={13} style={{
                         position: "absolute", left: "10px", top: "50%",
                         transform: "translateY(-50%)", color: "var(--warning)",
@@ -298,10 +294,8 @@ export default function RematesVisualizer({ datos = [] }) {
                     </select>
                 </div>
 
-                {/* Exportar */}
                 <BotonesExportar datos={datosFiltrados} nombre="remates_tgr" />
 
-                {/* Recargar */}
                 <button
                     onClick={forzarRecarga}
                     disabled={recargando}
@@ -327,83 +321,105 @@ export default function RematesVisualizer({ datos = [] }) {
             </div>
 
             {/* Tabla + Gráfico */}
-            <div style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 340px",
-                gap: "1rem",
-                alignItems: "start",
-            }}>
-
-                {/* Tabla */}
-                <div style={{
-                    background: "var(--surface)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "12px",
-                    overflow: "hidden",
-                }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
-                        <thead>
-                            <tr style={{ background: "var(--surface-2)", borderBottom: "1px solid var(--border)" }}>
-                                {COLUMNAS.map((col) => (
-                                    <th key={col.key} style={{
-                                        textAlign: "left",
-                                        padding: "0.75rem 1rem",
-                                        color: "var(--text-muted)",
-                                        fontSize: "0.7rem",
-                                        fontFamily: "monospace",
-                                        fontWeight: 700,
-                                        letterSpacing: "0.06em",
-                                        textTransform: "uppercase",
-                                        whiteSpace: "nowrap",
-                                    }}>
-                                        {col.label}
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {datosPagina.length === 0 ? (
-                                <tr>
-                                    <td
-                                        colSpan={COLUMNAS.length}
-                                        style={{
-                                            padding: "3rem",
-                                            textAlign: "center",
-                                            color: "var(--text-muted)",
-                                            fontFamily: "monospace",
-                                        }}
-                                    >
-                    // Sin resultados
-                                    </td>
+            <div className="tgr-main-grid">
+                <div className="min-w-0">
+                    <TablaSwipeHint />
+                    <div
+                        className="overflow-hidden rounded-xl"
+                        style={{
+                            background: "var(--surface)",
+                            border: "1px solid var(--border)",
+                        }}
+                    >
+                    <div className="overflow-x-auto">
+                        <table style={{
+                            width: "100%",
+                            minWidth: "560px",
+                            borderCollapse: "collapse",
+                            fontSize: "0.85rem",
+                        }}>
+                            <thead>
+                                <tr style={{ background: "var(--surface-2)", borderBottom: "1px solid var(--border)" }}>
+                                    {COLUMNAS.map((col) => (
+                                        <th
+                                            key={col.key}
+                                            style={{
+                                                textAlign: "left",
+                                                padding: "0.75rem 1rem",
+                                                color: "var(--text-muted)",
+                                                fontSize: "0.7rem",
+                                                fontFamily: "monospace",
+                                                fontWeight: 700,
+                                                letterSpacing: "0.06em",
+                                                textTransform: "uppercase",
+                                                whiteSpace: "nowrap",
+                                                ...(col.sticky ? {
+                                                    position: "sticky",
+                                                    right: 0,
+                                                    background: "var(--surface-2)",
+                                                    zIndex: 1,
+                                                } : null),
+                                            }}
+                                        >
+                                            {col.label}
+                                        </th>
+                                    ))}
                                 </tr>
-                            ) : (
-                                datosPagina.map((fila, i) => (
-                                    <tr
-                                        key={i}
-                                        style={{ borderBottom: "1px solid var(--border)" }}
-                                    >
-                                        {COLUMNAS.map((col) => (
-                                            <td key={col.key} style={{ padding: "0.75rem 1rem" }}>
-                                                {col.render
-                                                    ? col.render(fila[col.key], fila)
-                                                    : fila[col.key] ?? "—"}
-                                            </td>
-                                        ))}
+                            </thead>
+                            <tbody>
+                                {datosPagina.length === 0 ? (
+                                    <tr>
+                                        <td
+                                            colSpan={COLUMNAS.length}
+                                            style={{
+                                                padding: "3rem",
+                                                textAlign: "center",
+                                                color: "var(--text-muted)",
+                                                fontFamily: "monospace",
+                                            }}
+                                        >
+                                            // Sin resultados
+                                        </td>
                                     </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                                ) : (
+                                    datosPagina.map((fila, i) => (
+                                        <tr
+                                            key={i}
+                                            style={{ borderBottom: "1px solid var(--border)" }}
+                                        >
+                                            {COLUMNAS.map((col) => (
+                                                <td
+                                                    key={col.key}
+                                                    style={{
+                                                        padding: "0.75rem 1rem",
+                                                        maxWidth: col.maxWidth,
+                                                        ...(col.sticky ? {
+                                                            position: "sticky",
+                                                            right: 0,
+                                                            background: "var(--surface)",
+                                                            zIndex: 1,
+                                                        } : null),
+                                                    }}
+                                                >
+                                                    {col.render
+                                                        ? col.render(fila[col.key], fila)
+                                                        : fila[col.key] ?? "—"}
+                                                </td>
+                                            ))}
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
 
-                    {/* Paginación */}
-                    <div style={{
-                        padding: "0.75rem 1rem",
-                        borderTop: "1px solid var(--border)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        background: "var(--surface-2)",
-                    }}>
+                    <div
+                        className="flex flex-wrap items-center justify-between gap-2 px-3 py-3 sm:px-4"
+                        style={{
+                            borderTop: "1px solid var(--border)",
+                            background: "var(--surface-2)",
+                        }}
+                    >
                         <p style={{
                             color: "var(--text-muted)",
                             fontSize: "0.75rem",
@@ -444,9 +460,9 @@ export default function RematesVisualizer({ datos = [] }) {
                             >›</button>
                         </div>
                     </div>
+                    </div>
                 </div>
 
-                {/* Gráfico */}
                 <GraficoConcentracion datos={datosFiltrados} />
             </div>
 

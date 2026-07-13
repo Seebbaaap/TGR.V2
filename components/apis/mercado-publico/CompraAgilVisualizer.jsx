@@ -135,12 +135,13 @@ export default function CompraAgilVisualizer() {
                     <span
                         style={{
                             display: "block",
-                            maxWidth: "320px",
+                            maxWidth: "220px",
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                             whiteSpace: "nowrap",
                             color: "var(--text-secondary)",
                             fontWeight: 600,
+                            minWidth: 0,
                         }}
                         title={nombre}
                     >
@@ -158,12 +159,13 @@ export default function CompraAgilVisualizer() {
                     <span
                         style={{
                             display: "block",
-                            maxWidth: "280px",
+                            maxWidth: "200px",
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                             whiteSpace: "nowrap",
                             color: "var(--text-muted)",
                             fontSize: "0.78rem",
+                            minWidth: 0,
                         }}
                         title={organismo}
                     >
@@ -180,11 +182,26 @@ export default function CompraAgilVisualizer() {
         {
             key: "region",
             label: "Región",
-            render: (row) => (
-                <span style={{ color: "var(--text-muted)", fontSize: "0.78rem" }}>
-                    {row.region ?? "—"}
-                </span>
-            ),
+            render: (row) => {
+                const region = row.region ?? "—";
+                return (
+                    <span
+                        style={{
+                            display: "block",
+                            maxWidth: "140px",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            color: "var(--text-muted)",
+                            fontSize: "0.78rem",
+                            minWidth: 0,
+                        }}
+                        title={region}
+                    >
+                        {region}
+                    </span>
+                );
+            },
         },
         {
             key: "fechaCierre",
@@ -207,7 +224,7 @@ export default function CompraAgilVisualizer() {
     ];
 
     return (
-        <section style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+        <section className="flex flex-col gap-5 sm:gap-6">
             <MpSubnav />
 
             <div
@@ -215,7 +232,7 @@ export default function CompraAgilVisualizer() {
                     borderRadius: "1rem",
                     border: "1px solid color-mix(in srgb, var(--accent) 20%, var(--border))",
                     background: "color-mix(in srgb, var(--accent) 4%, var(--surface))",
-                    padding: "1.25rem",
+                    padding: "1.35rem",
                 }}
             >
                 <p
@@ -232,11 +249,10 @@ export default function CompraAgilVisualizer() {
                     Mercado Público
                 </p>
                 <h1
+                    className="text-2xl font-extrabold sm:text-[1.8rem]"
                     style={{
                         margin: 0,
                         color: "var(--text-secondary)",
-                        fontSize: "1.8rem",
-                        fontWeight: 800,
                     }}
                 >
                     Compra Ágil
@@ -254,34 +270,16 @@ export default function CompraAgilVisualizer() {
                 </p>
             </div>
 
-            <div
-                style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-                    gap: "0.9rem",
-                }}
-            >
+            <div className="kpi-grid kpi-grid--4">
                 {[
                     { label: "Registros", value: total ?? dataActualizada.length ?? 0 },
                     { label: "Filtrados", value: filas.length },
                     { label: "Estados", value: estados.length },
                     { label: "Regiones", value: regiones.length },
                 ].map((item) => (
-                    <div
-                        key={item.label}
-                        style={{
-                            borderRadius: "0.9rem",
-                            border: "1px solid var(--border)",
-                            background: "var(--surface)",
-                            padding: "1rem",
-                        }}
-                    >
-                        <p style={{ margin: 0, color: "var(--text-muted)", fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                            {item.label}
-                        </p>
-                        <p style={{ margin: 0, marginTop: "0.35rem", color: "var(--text-secondary)", fontSize: "1.35rem", fontWeight: 800 }}>
-                            {item.value}
-                        </p>
+                    <div key={item.label} className="kpi-card">
+                        <p className="kpi-card-label">{item.label}</p>
+                        <p className="kpi-card-value">{item.value}</p>
                     </div>
                 ))}
             </div>
@@ -296,7 +294,7 @@ export default function CompraAgilVisualizer() {
                         borderRadius: "1rem",
                         border: "1px solid var(--border)",
                         background: "var(--surface)",
-                        padding: "1rem",
+                        padding: "1.1rem",
                     }}
                 >
                     <input
@@ -304,9 +302,8 @@ export default function CompraAgilVisualizer() {
                         placeholder="Buscar por nombre, código u organismo..."
                         value={busqueda}
                         onChange={(e) => setBusqueda(e.target.value)}
+                        className="min-w-0 flex-1 basis-full sm:basis-56 sm:min-w-[200px]"
                         style={{
-                            flex: 1,
-                            minWidth: "240px",
                             padding: "0.7rem 0.9rem",
                             borderRadius: "0.75rem",
                             border: "1px solid var(--border)",
@@ -320,8 +317,8 @@ export default function CompraAgilVisualizer() {
                     <select
                         value={estadoFiltro}
                         onChange={(e) => setEstadoFiltro(e.target.value)}
+                        className="min-w-0 flex-1 basis-[calc(50%-0.375rem)] sm:basis-36 sm:min-w-[130px]"
                         style={{
-                            minWidth: "180px",
                             padding: "0.7rem 0.9rem",
                             borderRadius: "0.75rem",
                             border: "1px solid var(--border)",
@@ -342,8 +339,8 @@ export default function CompraAgilVisualizer() {
                     <select
                         value={regionFiltro}
                         onChange={(e) => setRegionFiltro(e.target.value)}
+                        className="min-w-0 flex-1 basis-[calc(50%-0.375rem)] sm:basis-36 sm:min-w-[130px]"
                         style={{
-                            minWidth: "180px",
                             padding: "0.7rem 0.9rem",
                             borderRadius: "0.75rem",
                             border: "1px solid var(--border)",
@@ -364,8 +361,8 @@ export default function CompraAgilVisualizer() {
                     <select
                         value={orden}
                         onChange={(e) => setOrden(e.target.value)}
+                        className="min-w-0 flex-1 basis-full sm:basis-44 sm:min-w-[160px]"
                         style={{
-                            minWidth: "220px",
                             padding: "0.7rem 0.9rem",
                             borderRadius: "0.75rem",
                             border: "1px solid var(--border)",

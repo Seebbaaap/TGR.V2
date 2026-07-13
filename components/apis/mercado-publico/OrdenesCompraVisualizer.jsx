@@ -124,12 +124,13 @@ export default function OrdenesCompraVisualizer() {
                     <span
                         style={{
                             display: "block",
-                            maxWidth: "320px",
+                            maxWidth: "220px",
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                             whiteSpace: "nowrap",
                             color: "var(--text-secondary)",
                             fontWeight: 600,
+                            minWidth: 0,
                         }}
                         title={proveedor}
                     >
@@ -147,12 +148,13 @@ export default function OrdenesCompraVisualizer() {
                     <span
                         style={{
                             display: "block",
-                            maxWidth: "280px",
+                            maxWidth: "200px",
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                             whiteSpace: "nowrap",
                             color: "var(--text-muted)",
                             fontSize: "0.78rem",
+                            minWidth: 0,
                         }}
                         title={comprador}
                     >
@@ -187,7 +189,7 @@ export default function OrdenesCompraVisualizer() {
     ];
 
     return (
-        <section style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+        <section className="flex flex-col gap-5 sm:gap-6">
             <MpSubnav />
 
             <div
@@ -195,7 +197,7 @@ export default function OrdenesCompraVisualizer() {
                     borderRadius: "1rem",
                     border: "1px solid color-mix(in srgb, var(--accent) 20%, var(--border))",
                     background: "color-mix(in srgb, var(--accent) 4%, var(--surface))",
-                    padding: "1.25rem",
+                    padding: "1.35rem",
                 }}
             >
                 <p
@@ -211,7 +213,7 @@ export default function OrdenesCompraVisualizer() {
                 >
                     Mercado Público
                 </p>
-                <h1 style={{ margin: 0, color: "var(--text-secondary)", fontSize: "1.8rem", fontWeight: 800 }}>
+                <h1 className="text-2xl font-extrabold sm:text-[1.8rem]" style={{ margin: 0, color: "var(--text-secondary)" }}>
                     Órdenes de Compra
                 </h1>
                 <p style={{ margin: 0, marginTop: "0.45rem", color: "var(--text-muted)", fontSize: "0.92rem", maxWidth: "60ch" }}>
@@ -219,33 +221,15 @@ export default function OrdenesCompraVisualizer() {
                 </p>
             </div>
 
-            <div
-                style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-                    gap: "0.9rem",
-                }}
-            >
+            <div className="kpi-grid kpi-grid--3">
                 {[
                     { label: "Registros", value: total ?? dataActualizada.length ?? 0 },
                     { label: "Filtrados", value: filas.length },
                     { label: "Estados", value: estados.length },
                 ].map((item) => (
-                    <div
-                        key={item.label}
-                        style={{
-                            borderRadius: "0.9rem",
-                            border: "1px solid var(--border)",
-                            background: "var(--surface)",
-                            padding: "1rem",
-                        }}
-                    >
-                        <p style={{ margin: 0, color: "var(--text-muted)", fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                            {item.label}
-                        </p>
-                        <p style={{ margin: 0, marginTop: "0.35rem", color: "var(--text-secondary)", fontSize: "1.35rem", fontWeight: 800 }}>
-                            {item.value}
-                        </p>
+                    <div key={item.label} className="kpi-card">
+                        <p className="kpi-card-label">{item.label}</p>
+                        <p className="kpi-card-value">{item.value}</p>
                     </div>
                 ))}
             </div>
@@ -260,7 +244,7 @@ export default function OrdenesCompraVisualizer() {
                         borderRadius: "1rem",
                         border: "1px solid var(--border)",
                         background: "var(--surface)",
-                        padding: "1rem",
+                        padding: "1.1rem",
                     }}
                 >
                     <input
@@ -268,9 +252,8 @@ export default function OrdenesCompraVisualizer() {
                         placeholder="Buscar por código, proveedor o comprador..."
                         value={busqueda}
                         onChange={(e) => setBusqueda(e.target.value)}
+                        className="min-w-0 flex-1 basis-full sm:basis-56 sm:min-w-[200px]"
                         style={{
-                            flex: 1,
-                            minWidth: "240px",
                             padding: "0.7rem 0.9rem",
                             borderRadius: "0.75rem",
                             border: "1px solid var(--border)",
@@ -284,8 +267,8 @@ export default function OrdenesCompraVisualizer() {
                     <select
                         value={estadoFiltro}
                         onChange={(e) => setEstadoFiltro(e.target.value)}
+                        className="min-w-0 flex-1 basis-full sm:basis-40 sm:min-w-[140px]"
                         style={{
-                            minWidth: "200px",
                             padding: "0.7rem 0.9rem",
                             borderRadius: "0.75rem",
                             border: "1px solid var(--border)",
@@ -306,8 +289,8 @@ export default function OrdenesCompraVisualizer() {
                     <select
                         value={orden}
                         onChange={(e) => setOrden(e.target.value)}
+                        className="min-w-0 flex-1 basis-full sm:basis-44 sm:min-w-[160px]"
                         style={{
-                            minWidth: "220px",
                             padding: "0.7rem 0.9rem",
                             borderRadius: "0.75rem",
                             border: "1px solid var(--border)",
