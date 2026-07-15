@@ -6,17 +6,28 @@ import {
     ordenCompraUiADb,
     ordenCompraDbAUi,
     COLUMNAS_LISTADO_ORDEN_COMPRA,
+    COLUMNAS_LISTADO_LICITACION,
+    COLUMNAS_LISTADO_COMPRA_AGIL,
     compraAgilUiADb,
     compraAgilDbAUi,
 } from "@/services/supabase/mercadoPublicoDbMapper";
+import {
+    columnasBusquedaMp,
+    resolverOrdenMp,
+    sanitizarBusquedaMp,
+} from "@/lib/mercado-publico/consultaListadoMp";
+import { ESTADOS_FACETA, REGIONES_FACETA, fusionarFacetas } from "@/lib/mercado-publico/facetasMp";
 
 const DIAS_RETENCION = 7;
+const PAGE_SIZE_DEFAULT = 5;
+const PAGE_SIZE_MAX = 50;
 
 const TABLAS = {
     licitaciones: {
         tabla: "licitaciones",
         uiADb: licitacionUiADb,
         dbAUi: licitacionDbAUi,
+        columnasListado: COLUMNAS_LISTADO_LICITACION,
         orden: { columna: "fecha_cierre", ascendente: false },
         soloVigentes: true,
     },
@@ -24,12 +35,14 @@ const TABLAS = {
         tabla: "ordenes_compra",
         uiADb: ordenCompraUiADb,
         dbAUi: ordenCompraDbAUi,
+        columnasListado: COLUMNAS_LISTADO_ORDEN_COMPRA,
         orden: { columna: "fecha", ascendente: false },
     },
     "compra-agil": {
         tabla: "compra_agil",
         uiADb: compraAgilUiADb,
         dbAUi: compraAgilDbAUi,
+        columnasListado: COLUMNAS_LISTADO_COMPRA_AGIL,
         orden: { columna: "fecha_cierre", ascendente: false },
         diasRetencion: DIAS_RETENCION,
         columnaRetencion: "fecha_creacion",
@@ -37,8 +50,6 @@ const TABLAS = {
 };
 
 export { DIAS_RETENCION };
-
-const TAMANO_LOTE_ORDENES = 5000;
 
 function getConfig(modulo) {
     const config = TABLAS[modulo];
@@ -174,60 +185,167 @@ export async function borrarRegistrosAntiguos(modulo) {
     return { eliminadas: count ?? 0 };
 }
 
-export async function listarFilasMercadoPublico(modulo, { limite = 50000 } = {}) {
-    const config = getConfig(modulo);
-    const { tabla, dbAUi, orden } = config;
-    const supabase = getSupabaseAdmin();
-
-    let consulta = supabase
-        .from(tabla)
-        .select("*", { count: "exact" });
-
+function aplicarFiltrosBase(consulta, config) {
     if (config.soloVigentes) {
-        consulta = consulta.gte("fecha_cierre", ahoraIso());
-    } else if (config.diasRetencion) {
-        consulta = consulta.gte(config.columnaRetencion, limiteDesde(config.diasRetencion));
+        return consulta.gte("fecha_cierre", ahoraIso());
     }
-
-    const { data, error, count } = await consulta
-        .order(orden.columna, { ascending: orden.ascendente })
-        .limit(limite);
-
-    if (error) throw error;
-
-    return {
-        filas: (data ?? []).map(dbAUi),
-        totalRegistros: count ?? data?.length ?? 0,
-    };
-
+    if (config.diasRetencion) {
+        return consulta.gte(config.columnaRetencion, limiteDesde(config.diasRetencion));
+    }
+    return consulta;
 }
 
-export async function listarOrdenesCompra() {
-    const { tabla, dbAUi, orden } = getConfig("ordenes-compra");
-    const supabase = getSupabaseAdmin();
-    const filas = [];
-    let desde = 0;
+function aplicarFiltrosUsuario(consulta, modulo, { q, estado, region }) {
+    let c = consulta;
+    const busqueda = sanitizarBusquedaMp(q);
 
-    while (true) {
-        const { data, error } = await supabase
-            .from(tabla)
-            .select(COLUMNAS_LISTADO_ORDEN_COMPRA)
-            .order(orden.columna, { ascending: orden.ascendente })
-            .range(desde, desde + TAMANO_LOTE_ORDENES - 1);
-
-        if (error) throw error;
-
-        const lote = data ?? [];
-        filas.push(...lote.map(dbAUi));
-
-        if (lote.length < TAMANO_LOTE_ORDENES) break;
-        desde += TAMANO_LOTE_ORDENES;
+    if (busqueda) {
+        const cols = columnasBusquedaMp(modulo);
+        const orExpr = cols.map((col) => `${col}.ilike.%${busqueda}%`).join(",");
+        c = c.or(orExpr);
     }
+
+    if (estado) {
+        c = c.eq("estado", estado);
+    }
+
+    if (region && modulo === "compra-agil") {
+        c = c.eq("region", region);
+    }
+
+    return c;
+}
+
+/**
+ * Listado paginado + filtros en BD.
+ * Mantiene total del módulo (solo filtros base) y total filtrado (base + usuario).
+ */
+export async function listarFilasMercadoPublico(
+    modulo,
+    {
+        q = "",
+        estado = "",
+        region = "",
+        orden = "",
+        page = 1,
+        pageSize = PAGE_SIZE_DEFAULT,
+        incluirFacetas = false,
+    } = {}
+) {
+    const config = getConfig(modulo);
+    const { tabla, dbAUi, columnasListado } = config;
+    const supabase = getSupabaseAdmin();
+
+    const size = Math.min(
+        PAGE_SIZE_MAX,
+        Math.max(1, Number(pageSize) || PAGE_SIZE_DEFAULT)
+    );
+    const pagina = Math.max(1, Number(page) || 1);
+    const from = (pagina - 1) * size;
+    const to = from + size - 1;
+
+    const ordenResuelto = resolverOrdenMp(modulo, orden, config.orden);
+    const filtrosUsuario = { q, estado, region };
+    const hayFiltroUsuario = Boolean(sanitizarBusquedaMp(q) || estado || (region && modulo === "compra-agil"));
+
+    // Total del módulo (solo retención/vigencia)
+    const countModuloPromise = aplicarFiltrosBase(
+        supabase.from(tabla).select("codigo", { count: "exact", head: true }),
+        config
+    );
+
+    // Página filtrada
+    let consulta = aplicarFiltrosBase(
+        supabase.from(tabla).select(columnasListado, { count: "exact" }),
+        config
+    );
+    consulta = aplicarFiltrosUsuario(consulta, modulo, filtrosUsuario);
+    consulta = consulta
+        .order(ordenResuelto.columna, {
+            ascending: ordenResuelto.ascendente,
+        })
+        .range(from, to);
+
+    const facetasPromise = incluirFacetas
+        ? listarFacetasLivianas(supabase, modulo, config)
+        : Promise.resolve(null);
+
+    const [countModuloRes, dataRes, facetas] = await Promise.all([
+        countModuloPromise,
+        consulta,
+        facetasPromise,
+    ]);
+
+    if (countModuloRes.error) throw countModuloRes.error;
+    if (dataRes.error) throw dataRes.error;
+
+    const filas = (dataRes.data ?? []).map(dbAUi);
+    const totalFiltrados = dataRes.count ?? filas.length;
+    const totalRegistros = countModuloRes.count ?? (hayFiltroUsuario ? totalFiltrados : filas.length);
+
+    const estadosEnPagina = filas.map((f) => f.estado).filter(Boolean);
+    const regionesEnPagina = filas.map((f) => f.region).filter(Boolean);
+
+    const estadosBase = facetas?.estados ?? ESTADOS_FACETA[modulo] ?? [];
+    const regionesBase =
+        modulo === "compra-agil" ? (facetas?.regiones ?? REGIONES_FACETA) : [];
 
     return {
         filas,
-        totalRegistros: filas.length,
+        totalRegistros,
+        totalFiltrados,
+        pagina,
+        pageSize: size,
+        estados: fusionarFacetas(estadosBase, estadosEnPagina),
+        regiones:
+            modulo === "compra-agil"
+                ? fusionarFacetas(regionesBase, regionesEnPagina)
+                : [],
     };
+}
+
+/** Facetas sin arrastrar payload: catálogo + sample liviano en CA/licitaciones. */
+async function listarFacetasLivianas(supabase, modulo, config) {
+    const catalogoEstados = ESTADOS_FACETA[modulo] ?? [];
+
+    // OC: no escanear 140k filas
+    if (modulo === "ordenes-compra") {
+        return { estados: catalogoEstados, regiones: [] };
+    }
+
+    const cols = modulo === "compra-agil" ? "estado, region" : "estado";
+    let q = aplicarFiltrosBase(
+        supabase.from(config.tabla).select(cols),
+        config
+    );
+    q = q.limit(8000);
+
+    const { data, error } = await q;
+    if (error) {
+        return {
+            estados: catalogoEstados,
+            regiones: modulo === "compra-agil" ? REGIONES_FACETA : [],
+        };
+    }
+
+    const estados = fusionarFacetas(
+        catalogoEstados,
+        (data ?? []).map((r) => r.estado)
+    );
+    const regiones =
+        modulo === "compra-agil"
+            ? fusionarFacetas(
+                  REGIONES_FACETA,
+                  (data ?? []).map((r) => r.region)
+              )
+            : [];
+
+    return { estados, regiones };
+}
+
+/** @deprecated preferir listarFilasMercadoPublico con page/pageSize */
+export async function listarOrdenesCompra(opts = {}) {
+    return listarFilasMercadoPublico("ordenes-compra", opts);
 }
 
 export async function obtenerFilaPorCodigo(modulo, codigo) {

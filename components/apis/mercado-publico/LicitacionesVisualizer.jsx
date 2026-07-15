@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import MpSubnav from "./MpSubnav";
 import MercadoPublicoTable from "./MercadoPublicoTable";
 import SkeletonTabla from "@/components/shared/SkeletonTabla";
@@ -8,17 +8,30 @@ import { useMercadoPublico } from "./useMercadoPublico";
 import AvisoDesdeDb from "./AvisoDesdeDb";
 import MercadoPublicoDetalleModal from "./MercadoPublicoDetalleModal";
 import EstadoBadge from "./EstadoBadge";
-import { ordenarFilasMp } from "@/lib/mercado-publico/ordenarFilasMp";
 import { formatFechaMp, formatMoneyMp } from "@/lib/mercado-publico/formatMp";
 
-export default function LicitacionesVisualizer() {
-    const { data, loading, error, total } = useMercadoPublico("licitaciones");
+const PAGE_SIZE = 5;
 
+export default function LicitacionesVisualizer() {
     const [busqueda, setBusqueda] = useState("");
     const [estadoFiltro, setEstadoFiltro] = useState("");
     const [orden, setOrden] = useState("");
+    const [pagina, setPagina] = useState(1);
     const [detalleAbierto, setDetalleAbierto] = useState(null);
     const [parches, setParches] = useState({});
+
+    useEffect(() => {
+        setPagina(1);
+    }, [busqueda, estadoFiltro, orden]);
+
+    const { data, loading, refreshing, error, total, totalFiltrados, estados } =
+        useMercadoPublico("licitaciones", {
+            q: busqueda,
+            estado: estadoFiltro,
+            orden,
+            page: pagina,
+            pageSize: PAGE_SIZE,
+        });
 
     const dataActualizada = useMemo(
         () => data.map((r) => (parches[r.codigo] ? { ...r, ...parches[r.codigo] } : r)),
@@ -29,29 +42,8 @@ export default function LicitacionesVisualizer() {
         setParches((prev) => ({ ...prev, [fila.codigo]: fila }));
     }
 
-    const estados = useMemo(() => {
-        const values = dataActualizada.map((d) => d.estado).filter(Boolean);
-        return [...new Set(values)].sort();
-    }, [dataActualizada]);
-
-    const filas = useMemo(() => {
-        const filtradas = dataActualizada.filter((row) => {
-            const nombre = row.nombre ?? "";
-            const codigo = row.codigo ?? "";
-            const estado = row.estado ?? "";
-
-            const q = busqueda.toLowerCase();
-            const textMatch =
-                !q ||
-                nombre.toLowerCase().includes(q) ||
-                codigo.toLowerCase().includes(q);
-
-            const estadoMatch = !estadoFiltro || estado === estadoFiltro;
-            return textMatch && estadoMatch;
-        });
-
-        return ordenarFilasMp(filtradas, orden, "montoEstimado");
-    }, [dataActualizada, busqueda, estadoFiltro, orden]);
+    const hayFiltros = Boolean(busqueda || estadoFiltro);
+    const mostrandoCarga = loading && data.length === 0;
 
     const columns = [
         {
@@ -171,8 +163,8 @@ export default function LicitacionesVisualizer() {
 
             <div className="kpi-grid kpi-grid--3">
                 {[
-                    { label: "Registros", value: total ?? dataActualizada.length ?? 0 },
-                    { label: "Filtrados", value: filas.length },
+                    { label: "Registros", value: total ?? 0 },
+                    { label: "Filtrados", value: totalFiltrados ?? 0 },
                     { label: "Estados", value: estados.length },
                 ].map((item) => (
                     <div key={item.label} className="kpi-card">
@@ -181,105 +173,109 @@ export default function LicitacionesVisualizer() {
                     </div>
                 ))}
             </div>
-            <AvisoDesdeDb visible loading={loading} hayFilas={data.length > 0} error={error} />
+            <AvisoDesdeDb
+                visible
+                loading={loading || refreshing}
+                hayFilas={total > 0 || data.length > 0}
+                error={error}
+            />
 
-            {!loading && (
-                <div
+            <div
+                style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "0.75rem",
+                    borderRadius: "1rem",
+                    border: "1px solid var(--border)",
+                    background: "var(--surface)",
+                    padding: "1.1rem",
+                }}
+            >
+                <input
+                    type="text"
+                    placeholder="Buscar por código o título..."
+                    value={busqueda}
+                    onChange={(e) => setBusqueda(e.target.value)}
+                    className="min-w-0 flex-1 basis-full sm:basis-56 sm:min-w-[200px]"
                     style={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: "0.75rem",
-                        borderRadius: "1rem",
+                        padding: "0.7rem 0.9rem",
+                        borderRadius: "0.75rem",
                         border: "1px solid var(--border)",
-                        background: "var(--surface)",
-                        padding: "1.1rem",
+                        background: "var(--surface-2)",
+                        color: "var(--text-secondary)",
+                        fontSize: "0.84rem",
+                        outline: "none",
+                    }}
+                />
+
+                <select
+                    value={estadoFiltro}
+                    onChange={(e) => setEstadoFiltro(e.target.value)}
+                    className="min-w-0 flex-1 basis-full sm:basis-40 sm:min-w-[140px]"
+                    style={{
+                        padding: "0.7rem 0.9rem",
+                        borderRadius: "0.75rem",
+                        border: "1px solid var(--border)",
+                        background: "var(--surface-2)",
+                        color: "var(--text-secondary)",
+                        fontSize: "0.84rem",
+                        outline: "none",
                     }}
                 >
-                    <input
-                        type="text"
-                        placeholder="Buscar por código o título..."
-                        value={busqueda}
-                        onChange={(e) => setBusqueda(e.target.value)}
-                        className="min-w-0 flex-1 basis-full sm:basis-56 sm:min-w-[200px]"
-                        style={{
-                            padding: "0.7rem 0.9rem",
-                            borderRadius: "0.75rem",
-                            border: "1px solid var(--border)",
-                            background: "var(--surface-2)",
-                            color: "var(--text-secondary)",
-                            fontSize: "0.84rem",
-                            outline: "none",
-                        }}
-                    />
+                    <option value="">Todos los estados</option>
+                    {estados.map((e) => (
+                        <option key={e} value={e}>
+                            {e}
+                        </option>
+                    ))}
+                </select>
 
-                    <select
-                        value={estadoFiltro}
-                        onChange={(e) => setEstadoFiltro(e.target.value)}
-                        className="min-w-0 flex-1 basis-full sm:basis-40 sm:min-w-[140px]"
-                        style={{
-                            padding: "0.7rem 0.9rem",
-                            borderRadius: "0.75rem",
-                            border: "1px solid var(--border)",
-                            background: "var(--surface-2)",
-                            color: "var(--text-secondary)",
-                            fontSize: "0.84rem",
-                            outline: "none",
-                        }}
-                    >
-                        <option value="">Todos los estados</option>
-                        {estados.map((e) => (
-                            <option key={e} value={e}>
-                                {e}
-                            </option>
-                        ))}
-                    </select>
+                <select
+                    value={orden}
+                    onChange={(e) => setOrden(e.target.value)}
+                    className="min-w-0 flex-1 basis-full sm:basis-44 sm:min-w-[160px]"
+                    style={{
+                        padding: "0.7rem 0.9rem",
+                        borderRadius: "0.75rem",
+                        border: "1px solid var(--border)",
+                        background: "var(--surface-2)",
+                        color: "var(--text-secondary)",
+                        fontSize: "0.84rem",
+                        outline: "none",
+                    }}
+                >
+                    <option value="">Orden predeterminado</option>
+                    <option value="precio-desc">Precio (Mayor a menor)</option>
+                    <option value="precio-asc">Precio (Menor a mayor)</option>
+                    <option value="fecha-desc">Fecha (Mayor a menor)</option>
+                    <option value="fecha-asc">Fecha (Menor a mayor)</option>
+                </select>
 
-                    <select
-                        value={orden}
-                        onChange={(e) => setOrden(e.target.value)}
-                        className="min-w-0 flex-1 basis-full sm:basis-44 sm:min-w-[160px]"
+                {hayFiltros && (
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setBusqueda("");
+                            setEstadoFiltro("");
+                        }}
                         style={{
                             padding: "0.7rem 0.9rem",
                             borderRadius: "0.75rem",
-                            border: "1px solid var(--border)",
-                            background: "var(--surface-2)",
-                            color: "var(--text-secondary)",
+                            border: "1px solid var(--danger)",
+                            background: "transparent",
+                            color: "var(--danger)",
                             fontSize: "0.84rem",
-                            outline: "none",
+                            cursor: "pointer",
                         }}
                     >
-                        <option value="">Orden predeterminado</option>
-                        <option value="precio-desc">Precio (Mayor a menor)</option>
-                        <option value="precio-asc">Precio (Menor a mayor)</option>
-                        <option value="fecha-desc">Fecha (Mayor a menor)</option>
-                        <option value="fecha-asc">Fecha (Menor a mayor)</option>
-                    </select>
+                        Limpiar filtros
+                    </button>
+                )}
+            </div>
 
-                    {(busqueda || estadoFiltro) && (
-                        <button
-                            onClick={() => {
-                                setBusqueda("");
-                                setEstadoFiltro("");
-                            }}
-                            style={{
-                                padding: "0.7rem 0.9rem",
-                                borderRadius: "0.75rem",
-                                border: "1px solid var(--danger)",
-                                background: "transparent",
-                                color: "var(--danger)",
-                                fontSize: "0.84rem",
-                                cursor: "pointer",
-                            }}
-                        >
-                            Limpiar filtros
-                        </button>
-                    )}
-                </div>
-            )}
-
-            {loading ? (
+            {mostrandoCarga ? (
                 <SkeletonTabla filas={8} columnas={5} />
-            ) : filas.length === 0 ? (
+            ) : !loading && totalFiltrados === 0 ? (
                 <div
                     style={{
                         padding: "3rem 1rem",
@@ -294,7 +290,7 @@ export default function LicitacionesVisualizer() {
                         Sin licitaciones
                     </p>
                     <p style={{ margin: 0, fontSize: "0.84rem" }}>
-                        {busqueda || estadoFiltro
+                        {hayFiltros
                             ? "No hay registros que coincidan con los filtros aplicados."
                             : "No hay licitaciones en Supabase todavía."}
                     </p>
@@ -302,10 +298,14 @@ export default function LicitacionesVisualizer() {
             ) : (
                 <MercadoPublicoTable
                     columns={columns}
-                    rows={filas}
+                    rows={dataActualizada}
                     onVerDetalle={setDetalleAbierto}
                     emptyMessage="Sin licitaciones disponibles."
                     labelPlural="licitaciones"
+                    paginaTamano={PAGE_SIZE}
+                    pagina={pagina}
+                    totalFilas={totalFiltrados}
+                    onPaginaChange={setPagina}
                 />
             )}
 
@@ -320,4 +320,3 @@ export default function LicitacionesVisualizer() {
         </section>
     );
 }
-

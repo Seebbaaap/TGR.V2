@@ -54,13 +54,25 @@ export function licitacionDbAUi(row) {
     };
 }
 
-// Sin payload ni items: liviano para listar decenas de miles de filas.
+// Sin payload ni items: liviano para listar.
 export const COLUMNAS_LISTADO_ORDEN_COMPRA =
     "codigo, nombre, proveedor, comprador, monto_total, moneda, fecha, estado, " +
     "codigo_licitacion, descripcion, total_neto, impuestos, total, " +
     "nombre_unidad, actividad_comprador, direccion_unidad, comuna_unidad, region_unidad, " +
     "actividad_proveedor, direccion_proveedor, comuna_proveedor, region_proveedor, " +
     "cantidad_items, sincronizado_en";
+
+/** Columnas de listado (sin payload JSON ni arrays pesados). */
+export const COLUMNAS_LISTADO_LICITACION =
+    "codigo, nombre, estado, organismo, nombre_unidad, direccion_unidad, region_unidad, " +
+    "cantidad_reclamos, fecha_cierre, fecha_creacion, fecha_inicio, fecha_final, " +
+    "monto_estimado, moneda, descripcion, sincronizado_en";
+
+export const COLUMNAS_LISTADO_COMPRA_AGIL =
+    "codigo, nombre, estado, organismo, region, monto, moneda, fecha_cierre, fecha_creacion, " +
+    "fecha_cancelacion, estado_convocatoria, fecha_cierre_primer_llamado, " +
+    "fecha_cierre_segundo_llamado, direccion_entrega, plazo_entrega_dias, " +
+    "total_ofertas_recibidas, descripcion, sincronizado_en";
 
 export function ordenCompraUiADb(fila) {
     return {

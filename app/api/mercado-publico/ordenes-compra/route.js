@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { getOrdenesCompra } from "@/services/mercado-publico/listadoMercadoPublicoService";
 
-export async function GET() {
+export async function GET(request) {
     try {
-        const resultado = await getOrdenesCompra();
+        const params = Object.fromEntries(request.nextUrl.searchParams.entries());
+        const resultado = await getOrdenesCompra(params);
         return NextResponse.json(resultado);
     } catch (error) {
         return NextResponse.json(
