@@ -1,8 +1,28 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ExternalLink, X } from "lucide-react";
+import { ExternalLink, MapPin, X } from "lucide-react";
 import { tieneDetalleEnPayload } from "@/services/mercado-publico/mercadoPublicoMapper";
+import { formatFechaMp, formatMoneyMp } from "@/lib/mercado-publico/formatMp";
+
+const formatMoney = formatMoneyMp;
+const formatFecha = (valor) => formatFechaMp(valor, { conHora: true });
+
+function urlGoogleMaps(direccion, region) {
+    const dir = String(direccion ?? "").trim();
+    if (!dir) return null;
+
+    const reg = String(region ?? "").trim();
+    const partes = [dir];
+
+    // Evita repetir la región si ya viene en la dirección
+    if (reg && !dir.toLowerCase().includes(reg.toLowerCase())) {
+        partes.push(reg);
+    }
+    partes.push("Chile");
+
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(partes.join(", "))}`;
+}
 
 function Campo({ label, valor }) {
     return (
@@ -23,7 +43,33 @@ function Campo({ label, valor }) {
     );
 }
 
-function Seccion({ titulo, children }) {
+function CargandoDetalles() {
+    return (
+        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", color: "#38bdf8", fontSize: "0.82rem" }}>
+            <span
+                aria-hidden
+                style={{
+                    width: "0.85rem",
+                    height: "0.85rem",
+                    border: "2px solid rgba(56,189,248,0.35)",
+                    borderTopColor: "#38bdf8",
+                    borderRadius: "50%",
+                    animation: "mp-aviso-spin 0.75s linear infinite",
+                    flexShrink: 0,
+                }}
+            />
+            Cargando detalles...
+        </span>
+    );
+}
+
+function Seccion({ titulo, children, direccionMapa, regionMapa }) {
+    const mapsUrl = urlGoogleMaps(direccionMapa, regionMapa);
+    const queryLabel = [direccionMapa, regionMapa]
+        .map((v) => String(v ?? "").trim())
+        .filter(Boolean)
+        .join(", ");
+
     return (
         <div style={{
             background: "var(--surface-2)",
@@ -40,36 +86,33 @@ function Seccion({ titulo, children }) {
                 fontWeight: 700,
                 letterSpacing: "0.08em",
                 textTransform: "uppercase",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.35rem",
             }}>
-                {titulo}
+                <span>{titulo}</span>
+                {mapsUrl && (
+                    <a
+                        href={mapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`Abrir en Google Maps: ${queryLabel}`}
+                        title={`Abrir en Google Maps${queryLabel ? `: ${queryLabel}` : ""}`}
+                        className="mp-map-pin"
+                        style={{
+                            color: "var(--accent)",
+                            display: "inline-flex",
+                            lineHeight: 0,
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <MapPin size={14} />
+                    </a>
+                )}
             </p>
             {children}
         </div>
     );
-}
-
-function formatMoney(value) {
-    const amount = Number(value || 0);
-    if (!amount) return "—";
-    return new Intl.NumberFormat("es-CL", {
-        style: "currency",
-        currency: "CLP",
-        maximumFractionDigits: 0,
-    }).format(amount);
-}
-
-function formatFecha(valor) {
-    if (!valor) return "—";
-    const normalizado = String(valor).replace(" ", "T");
-    const fecha = new Date(normalizado);
-    if (isNaN(fecha.getTime())) return valor;
-    return fecha.toLocaleDateString("es-CL", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-    });
 }
 
 function extraerItemsOc(raw) {
@@ -273,16 +316,31 @@ export default function MercadoPublicoDetalleModal({ row, modulo, onClose, onDet
                         onClick={onClose}
                         aria-label="Cerrar"
                         className="shrink-0"
-                        style={{ color: "var(--text-muted)", background: "none", border: "none", cursor: "pointer", padding: "4px" }}
+                        style={{ color: "var(--danger)", background: "none", border: "none", cursor: "pointer", padding: "4px" }}
                     >
                         <X size={18} />
                     </button>
                 </div>
 
                 <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4 sm:p-6">
+                    <style>{`
+                        @keyframes mp-aviso-spin {
+                            to { transform: rotate(360deg); }
+                        }
+                        @keyframes mp-map-nudge {
+                            0%, 86%, 100% { transform: translateX(0); }
+                            89% { transform: translateX(-1.5px); }
+                            92% { transform: translateX(1.5px); }
+                            95% { transform: translateX(-1px); }
+                            98% { transform: translateX(0.5px); }
+                        }
+                        .mp-map-pin {
+                            animation: mp-map-nudge 2s ease-in-out infinite;
+                        }
+                    `}</style>
                     {cargando && (
-                        <p style={{ margin: 0, color: "var(--text-muted)", fontSize: "0.82rem" }}>
-                            Cargando detalle desde Mercado Público…
+                        <p style={{ margin: 0 }}>
+                            <CargandoDetalles />
                         </p>
                     )}
                     {error && (
@@ -321,7 +379,11 @@ export default function MercadoPublicoDetalleModal({ row, modulo, onClose, onDet
                                 </Seccion>
                             )}
 
-                            <Seccion titulo="Organismo comprador">
+                            <Seccion
+                                titulo="Organismo comprador"
+                                direccionMapa={fila.direccionUnidad ?? raw.Comprador?.DireccionUnidad}
+                                regionMapa={fila.regionUnidad ?? raw.Comprador?.RegionUnidad}
+                            >
                                 <div className="modal-grid-2">
                                     <Campo label="Nombre organismo" valor={fila.organismo ?? raw.Comprador?.NombreOrganismo} />
                                     <Campo label="Nombre unidad" valor={fila.nombreUnidad ?? raw.Comprador?.NombreUnidad} />
@@ -554,7 +616,11 @@ export default function MercadoPublicoDetalleModal({ row, modulo, onClose, onDet
                                 </div>
                             </Seccion>
 
-                            <Seccion titulo="Entrega">
+                            <Seccion
+                                titulo="Entrega"
+                                direccionMapa={fila.direccionEntrega ?? entregaCa.direccion_entrega}
+                                regionMapa={fila.region ?? institucionCa.nombre_region}
+                            >
                                 <div className="modal-grid-2">
                                     <Campo
                                         label="Dirección de entrega"

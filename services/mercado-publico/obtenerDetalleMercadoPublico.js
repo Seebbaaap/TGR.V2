@@ -34,6 +34,12 @@ export async function obtenerDetalleMercadoPublico(modulo, codigo) {
     if (!mapFn) throw new Error(`Módulo no soportado: ${modulo}`);
 
     const existente = await obtenerFilaPorCodigo(modulo, codigo);
+
+    // OC: si ya tiene fecha, el detalle ya fue persistido
+    if (modulo === "ordenes-compra" && existente?.fecha) {
+        return { fila: existente };
+    }
+
     if (existente && tieneDetalleEnPayload(modulo, existente.payload)) {
         return { fila: existente };
     }

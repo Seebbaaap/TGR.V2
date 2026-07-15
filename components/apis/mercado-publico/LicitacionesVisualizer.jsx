@@ -7,70 +7,9 @@ import SkeletonTabla from "@/components/shared/SkeletonTabla";
 import { useMercadoPublico } from "./useMercadoPublico";
 import AvisoDesdeDb from "./AvisoDesdeDb";
 import MercadoPublicoDetalleModal from "./MercadoPublicoDetalleModal";
+import EstadoBadge from "./EstadoBadge";
 import { ordenarFilasMp } from "@/lib/mercado-publico/ordenarFilasMp";
-
-function formatFecha(valor) {
-    if (!valor) return "—";
-    const fecha = new Date(valor);
-    if (isNaN(fecha.getTime())) return valor;
-    return (
-        fecha.toLocaleDateString("es-CL", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-        }) +
-        " " +
-        fecha.toLocaleTimeString("es-CL", {
-            hour: "2-digit",
-            minute: "2-digit",
-        })
-    );
-}
-
-function formatMoney(value) {
-    const amount = Number(value || 0);
-    if (!amount) return "—";
-    return new Intl.NumberFormat("es-CL", {
-        style: "currency",
-        currency: "CLP",
-        maximumFractionDigits: 0,
-    }).format(amount);
-}
-
-const BADGE_ESTILOS = {
-    Publicada: { border: "#16a34a", bg: "rgba(22,163,74,0.12)", color: "#4ade80" },
-    Adjudicada: { border: "#0284c7", bg: "rgba(2,132,199,0.12)", color: "#38bdf8" },
-    Cerrada: { border: "#6b7280", bg: "rgba(107,114,128,0.12)", color: "#9ca3af" },
-    Desierta: { border: "#d97706", bg: "rgba(217,119,6,0.12)", color: "#fbbf24" },
-    Cancelada: { border: "#dc2626", bg: "rgba(220,38,38,0.12)", color: "#f87171" },
-    Suspendida: { border: "#ea580c", bg: "rgba(234,88,12,0.12)", color: "#fb923c" },
-    "En Evaluación": { border: "#7c3aed", bg: "rgba(124,58,237,0.12)", color: "#a78bfa" },
-};
-
-function EstadoBadge({ estado }) {
-    const s = BADGE_ESTILOS[estado] || {
-        border: "#6b7280",
-        bg: "rgba(107,114,128,0.12)",
-        color: "#9ca3af",
-    };
-
-    return (
-        <span
-            style={{
-                display: "inline-block",
-                padding: "0.15rem 0.65rem",
-                borderRadius: "9999px",
-                border: `1px solid ${s.border}`,
-                background: s.bg,
-                color: s.color,
-                fontSize: "0.72rem",
-                fontWeight: 500,
-            }}
-        >
-            {estado || "Sin estado"}
-        </span>
-    );
-}
+import { formatFechaMp, formatMoneyMp } from "@/lib/mercado-publico/formatMp";
 
 export default function LicitacionesVisualizer() {
     const { data, loading, error, total } = useMercadoPublico("licitaciones");
@@ -182,7 +121,7 @@ export default function LicitacionesVisualizer() {
             label: "Monto est.",
             render: (row) => (
                 <span style={{ color: "var(--accent)", fontWeight: 600, fontFamily: "monospace", whiteSpace: "nowrap" }}>
-                    {formatMoney(row.montoEstimado)}
+                    {formatMoneyMp(row.montoEstimado)}
                 </span>
             ),
         },
@@ -191,7 +130,7 @@ export default function LicitacionesVisualizer() {
             label: "Fecha cierre",
             render: (row) => (
                 <span style={{ color: "var(--text-muted)", fontSize: "0.78rem", whiteSpace: "nowrap" }}>
-                    {formatFecha(row.fechaCierre)}
+                    {formatFechaMp(row.fechaCierre, { conHora: true })}
                 </span>
             ),
         },
@@ -226,7 +165,7 @@ export default function LicitacionesVisualizer() {
                     Licitaciones
                 </h1>
                 <p style={{ margin: 0, marginTop: "0.45rem", color: "var(--text-muted)", fontSize: "0.92rem", maxWidth: "60ch" }}>
-                    Licitaciones sincronizadas desde Mercado Público y servidas desde Base de Datos
+                    Licitaciones sincronizadas desde Mercado Público
                 </p>
             </div>
 

@@ -249,29 +249,106 @@ export async function obtenerFilaPorCodigo(modulo, codigo) {
     return data ? dbAUi(data) : null;
 }
 
-// filas recientes que aun no tienen payload de detalle (para el cron)
+/**
+ * OC: sin fecha = pendiente de detalle.
+ * Tras un intento fallido se marca payload._detalleNoDisponible para no rebloquear la cola.
+ */
+export async function marcarOrdenCompraDetalleNoDisponible(codigo) {
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+        .from("ordenes_compra")
+        .select("payload")
+        .eq("codigo", codigo)
+        .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return;
+
+    const payloadActual =
+        data.payload && typeof data.payload === "object" ? data.payload : {};
+
+    const { error: errorUpdate } = await supabase
+        .from("ordenes_compra")
+        .update({
+            payload: {
+                ...payloadActual,
+                _detalleNoDisponible: true,
+            },
+        })
+        .eq("codigo", codigo);
+
+    if (errorUpdate) throw errorUpdate;
+}
+
+// filas que aun no tienen payload de detalle (para el cron / script local)
 export async function listarPendientesDetalle(modulo, limite = 10) {
     const config = getConfig(modulo);
     const { tabla, orden } = config;
     const supabase = getSupabaseAdmin();
 
-    let consulta = supabase
-        .from(tabla)
-        .select("codigo, payload")
-        .order(orden.columna, { ascending: orden.ascendente })
-        .limit(150);
+    // Órdenes de compra: la fecha solo se setea con detalle → pendientes = fecha IS NULL
+    if (modulo === "ordenes-compra") {
+        const { data, error } = await supabase
+            .from(tabla)
+            .select("codigo, payload, fecha")
+            .is("fecha", null)
+            .order("sincronizado_en", { ascending: false })
+            .limit(Math.max(limite * 20, 50));
 
-    if (config.soloVigentes) {
-        consulta = consulta.gte("fecha_cierre", ahoraIso());
-    } else if (config.diasRetencion) {
-        consulta = consulta.gte(config.columnaRetencion, limiteDesde(config.diasRetencion));
+        if (error) throw error;
+
+        return (data ?? [])
+            .filter((row) => row.payload?._detalleNoDisponible !== true)
+            .slice(0, limite)
+            .map((row) => ({ modulo, codigo: row.codigo }));
     }
 
-    const { data, error } = await consulta;
-    if (error) throw error;
+    // Licitaciones: detalle = payload.Comprador (filtrar en DB, no solo top 150)
+    if (modulo === "licitaciones") {
+        const { data, error } = await supabase
+            .from(tabla)
+            .select("codigo, payload")
+            .gte("fecha_cierre", ahoraIso())
+            .is("payload->Comprador", null)
+            .order("fecha_cierre", { ascending: true })
+            .limit(limite);
 
-    return (data ?? [])
-        .filter((row) => !tieneDetalleEnPayload(modulo, row.payload))
-        .slice(0, limite)
-        .map((row) => ({ modulo, codigo: row.codigo }));
+        if (error) throw error;
+
+        return (data ?? []).map((row) => ({ modulo, codigo: row.codigo }));
+    }
+
+    // Compra ágil / otros: recorrer páginas hasta juntar pendientes reales
+    const pageSize = 100;
+    const maxScan = 2000;
+    const pendientes = [];
+
+    for (let from = 0; from < maxScan && pendientes.length < limite; from += pageSize) {
+        let consulta = supabase
+            .from(tabla)
+            .select("codigo, payload")
+            .order(orden.columna, { ascending: orden.ascendente })
+            .range(from, from + pageSize - 1);
+
+        if (config.soloVigentes) {
+            consulta = consulta.gte("fecha_cierre", ahoraIso());
+        } else if (config.diasRetencion) {
+            consulta = consulta.gte(config.columnaRetencion, limiteDesde(config.diasRetencion));
+        }
+
+        const { data, error } = await consulta;
+        if (error) throw error;
+        if (!data?.length) break;
+
+        for (const row of data) {
+            if (!tieneDetalleEnPayload(modulo, row.payload)) {
+                pendientes.push({ modulo, codigo: row.codigo });
+                if (pendientes.length >= limite) break;
+            }
+        }
+
+        if (data.length < pageSize) break;
+    }
+
+    return pendientes;
 }

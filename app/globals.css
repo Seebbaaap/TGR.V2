@@ -235,6 +235,59 @@
   font-family: monospace;
 }
 
+.collab-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  width: auto;
+  height: 2.35rem;
+  padding: 0 0.55rem;
+  border-radius: 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface-2));
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 160ms ease;
+  min-width: 0;
+  flex-shrink: 1;
+  max-width: min(100%, 11.5rem);
+}
+
+.collab-btn:hover {
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface-2));
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+}
+
+.collab-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 999px;
+  color: var(--accent);
+  font-size: 0.85rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.collab-btn-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+  min-width: 0;
+}
+
+.collab-btn-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .collab-sub {
   display: none;
   font-size: 0.7rem;
@@ -389,6 +442,28 @@
 
   .theme-label {
     display: inline;
+  }
+
+  .collab-btn {
+    height: auto;
+    gap: 0.6rem;
+    padding: 0.65rem 1rem;
+    border-radius: 0.75rem;
+    flex-shrink: 0;
+    max-width: none;
+  }
+
+  .collab-btn-icon {
+    width: 28px;
+    height: 28px;
+    background: color-mix(in srgb, var(--accent) 20%, var(--surface));
+    font-size: 0.9rem;
+  }
+
+  .collab-btn-title {
+    font-size: 0.82rem;
+    overflow: visible;
+    text-overflow: unset;
   }
 
   .collab-sub {

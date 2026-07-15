@@ -99,7 +99,7 @@ export function tieneDetalleEnPayload(modulo, payload) {
     return false;
 }
 
-export { tieneDetalleCompraAgil, tieneDetalleOrdenCompra };
+export { tieneDetalleCompraAgil };
 
 export function mapCompraAgil(item = {}) {
     if (item.codigo && !item.CodigoExterno) {

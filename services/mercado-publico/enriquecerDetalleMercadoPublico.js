@@ -2,6 +2,7 @@ import { tieneDetalleEnPayload } from "@/services/mercado-publico/mercadoPublico
 import { obtenerDetalleMercadoPublico } from "@/services/mercado-publico/obtenerDetalleMercadoPublico";
 import {
     listarPendientesDetalle,
+    marcarOrdenCompraDetalleNoDisponible,
     obtenerFilaPorCodigo,
 } from "@/services/supabase/mercadoPublicoRepo";
 
@@ -11,14 +12,32 @@ function esperar(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/** OC: detalle útil = ya tiene fecha. Resto de módulos: payload enriquecido. */
+function tieneDetalleUtil(modulo, fila) {
+    if (modulo === "ordenes-compra") {
+        return Boolean(fila?.fecha);
+    }
+    return tieneDetalleEnPayload(modulo, fila?.payload);
+}
+
 export async function enriquecerDetalleMercadoPublico({
     limite = 3,
     pausaMs = 10000,
+    modulos = MODULOS,
 } = {}) {
-    const procesados = [];
-    const cupoPorModulo = Math.max(1, Math.ceil(limite / MODULOS.length));
+    const listaModulos = (Array.isArray(modulos) && modulos.length > 0
+        ? modulos
+        : MODULOS
+    ).filter((m) => MODULOS.includes(m));
 
-    for (const modulo of MODULOS) {
+    if (listaModulos.length === 0) {
+        throw new Error(`Módulos inválidos. Use: ${MODULOS.join(", ")}`);
+    }
+
+    const procesados = [];
+    const cupoPorModulo = Math.max(1, Math.ceil(limite / listaModulos.length));
+
+    for (const modulo of listaModulos) {
         if (procesados.length >= limite) break;
 
         const faltan = limite - procesados.length;
@@ -36,14 +55,20 @@ export async function enriquecerDetalleMercadoPublico({
 
             try {
                 const antes = await obtenerFilaPorCodigo(modulo, codigo);
-                const teniaDetalle = tieneDetalleEnPayload(modulo, antes?.payload);
+                const teniaDetalle = tieneDetalleUtil(modulo, antes);
 
                 const { fila } = await obtenerDetalleMercadoPublico(modulo, codigo);
-                const tieneAhora = tieneDetalleEnPayload(modulo, fila?.payload);
+                const tieneAhora = tieneDetalleUtil(modulo, fila);
 
                 let detalle = "sin_cambio";
                 if (teniaDetalle) detalle = "ya_tenia";
                 else if (tieneAhora) detalle = "actualizado";
+
+                // OC sin fecha tras el fetch: marcar para no bloquear la cola
+                if (modulo === "ordenes-compra" && !tieneAhora) {
+                    await marcarOrdenCompraDetalleNoDisponible(codigo);
+                    detalle = "no_disponible";
+                }
 
                 procesados.push({
                     modulo,
@@ -53,6 +78,14 @@ export async function enriquecerDetalleMercadoPublico({
                     ok: true,
                 });
             } catch (error) {
+                if (modulo === "ordenes-compra") {
+                    try {
+                        await marcarOrdenCompraDetalleNoDisponible(codigo);
+                    } catch {
+                        // no enmascarar el error original
+                    }
+                }
+
                 procesados.push({
                     modulo,
                     codigo,
