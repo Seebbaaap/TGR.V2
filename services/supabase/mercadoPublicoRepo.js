@@ -263,6 +263,9 @@ export async function listarFilasMercadoPublico(
     consulta = consulta
         .order(ordenResuelto.columna, {
             ascending: ordenResuelto.ascendente,
+            ...(ordenResuelto.nullsFirst !== undefined
+                ? { nullsFirst: ordenResuelto.nullsFirst }
+                : {}),
         })
         .range(from, to);
 
