@@ -6,6 +6,7 @@ import { Menu } from "lucide-react";
 import Sidebar from "@/components/layout/Sidebar";
 import ThemeToggleBtn from "@/components/layout/ThemeToggleBtn";
 import CollaborateBtn from "@/components/layout/CollaborateBtn";
+import UserMenu from "@/components/layout/UserMenu";
 
 export default function DashboardShell({ children }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -58,11 +59,15 @@ export default function DashboardShell({ children }) {
                         <CollaborateBtn />
                         <div className="dash-header-spacer" aria-hidden="true" />
                         <ThemeToggleBtn />
+                        <UserMenu />
                     </div>
 
                     <div className="dash-header-row only-desktop">
                         <CollaborateBtn />
-                        <ThemeToggleBtn />
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                            <ThemeToggleBtn />
+                            <UserMenu />
+                        </div>
                     </div>
                 </header>
 
