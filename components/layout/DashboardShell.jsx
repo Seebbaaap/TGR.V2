@@ -32,7 +32,9 @@ export default function DashboardShell({ children, titulo, subtitulo }) {
                 </header>
 
                 <main style={{ flex: 1, padding: "1.5rem", overflowX: "auto" }}>
-                    {children}
+                    <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+                        {children}
+                    </div>
                 </main>
             </div>
         </div>

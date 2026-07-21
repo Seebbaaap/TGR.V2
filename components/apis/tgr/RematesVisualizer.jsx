@@ -10,8 +10,8 @@ import {
     Filter,
     RefreshCw,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import BotonesExportar from "@/components/shared/BotonesExportar";
-import FichaTecnicaModal from "@/components/apis/tgr/FichaTecnicaModal";
 import GraficoConcentracion from "@/components/apis/tgr/GraficoConcentracion";
 import { formatCLP, formatCLPCompacto } from "@/utils/formatCurrency";
 
@@ -63,10 +63,10 @@ function KpiGrande({ icono: Icono, titulo, valor, color }) {
 
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function RematesVisualizer({ datos = [] }) {
+    const router = useRouter();
     const [busqueda, setBusqueda] = useState("");
     const [comunaFiltro, setComunaFiltro] = useState("TODAS");
     const [pagina, setPagina] = useState(1);
-    const [fichaAbierta, setFichaAbierta] = useState(null);
     const [recargando, setRecargando] = useState(false);
 
     // ── Comunas disponibles ───────────────────────────────────────────────────
@@ -93,7 +93,7 @@ export default function RematesVisualizer({ datos = [] }) {
         return res;
     }, [datos, busqueda, comunaFiltro]);
 
-    // ── KPIs — todos sobre montoMinimo con fallback a montoAvaluo ─────────────
+    // ── KPIs ──────────────────────────────────────────────────────────────────
     const totalMinimo = useMemo(
         () => datos.reduce((s, d) => s + (d.montoMinimo || d.montoAvaluo || 0), 0),
         [datos]
@@ -157,7 +157,6 @@ export default function RematesVisualizer({ datos = [] }) {
             ),
         },
         {
-            // Columna usa montoMinimo como valor principal, cae a montoAvaluo
             key: "montoMinimo",
             label: "Tasación",
             render: (v, fila) => {
@@ -179,7 +178,10 @@ export default function RematesVisualizer({ datos = [] }) {
             label: "Acciones",
             render: (_, fila) => (
                 <button
-                    onClick={() => setFichaAbierta(fila)}
+                    onClick={() => {
+                        const rolFormato = fila._raw?.rolFormato;
+                        if (rolFormato) router.push(`/dashboard/tgr/${encodeURIComponent(rolFormato)}`);
+                    }}
                     style={{
                         background: "var(--surface-2)",
                         border: "1px solid var(--accent)",
@@ -206,30 +208,10 @@ export default function RematesVisualizer({ datos = [] }) {
 
             {/* KPIs */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem" }}>
-                <KpiGrande
-                    icono={Building2}
-                    titulo="Propiedades Únicas"
-                    valor={datos.length.toLocaleString("es-CL")}
-                    color="var(--accent)"
-                />
-                <KpiGrande
-                    icono={Wallet}
-                    titulo="Volumen Real"
-                    valor={formatCLPCompacto(totalMinimo)}
-                    color="var(--success)"
-                />
-                <KpiGrande
-                    icono={TrendingUp}
-                    titulo="Promedio"
-                    valor={formatCLPCompacto(promedioMinimo)}
-                    color="var(--warning)"
-                />
-                <KpiGrande
-                    icono={BarChart2}
-                    titulo="Valor Máximo"
-                    valor={formatCLPCompacto(maxMinimo)}
-                    color="var(--danger)"
-                />
+                <KpiGrande icono={Building2} titulo="Propiedades Únicas" valor={datos.length.toLocaleString("es-CL")} color="var(--accent)" />
+                <KpiGrande icono={Wallet} titulo="Volumen Real" valor={formatCLPCompacto(totalMinimo)} color="var(--success)" />
+                <KpiGrande icono={TrendingUp} titulo="Promedio" valor={formatCLPCompacto(promedioMinimo)} color="var(--warning)" />
+                <KpiGrande icono={BarChart2} titulo="Valor Máximo" valor={formatCLPCompacto(maxMinimo)} color="var(--danger)" />
             </div>
 
             {/* Filtros */}
@@ -243,12 +225,8 @@ export default function RematesVisualizer({ datos = [] }) {
                 flexWrap: "wrap",
                 alignItems: "center",
             }}>
-                {/* Búsqueda */}
                 <div style={{ flex: 1, minWidth: "220px", position: "relative" }}>
-                    <Search size={14} style={{
-                        position: "absolute", left: "10px", top: "50%",
-                        transform: "translateY(-50%)", color: "var(--accent)",
-                    }} />
+                    <Search size={14} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "var(--accent)" }} />
                     <input
                         type="text"
                         placeholder="Deudor o Dirección..."
@@ -268,12 +246,8 @@ export default function RematesVisualizer({ datos = [] }) {
                     />
                 </div>
 
-                {/* Selector de comuna */}
                 <div style={{ position: "relative", minWidth: "200px" }}>
-                    <Filter size={13} style={{
-                        position: "absolute", left: "10px", top: "50%",
-                        transform: "translateY(-50%)", color: "var(--warning)",
-                    }} />
+                    <Filter size={13} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "var(--warning)" }} />
                     <select
                         value={comunaFiltro}
                         onChange={(e) => { setComunaFiltro(e.target.value); setPagina(1); }}
@@ -291,17 +265,13 @@ export default function RematesVisualizer({ datos = [] }) {
                         }}
                     >
                         {comunas.map((c) => (
-                            <option key={c} value={c} style={{ background: "var(--surface)" }}>
-                                {c}
-                            </option>
+                            <option key={c} value={c} style={{ background: "var(--surface)" }}>{c}</option>
                         ))}
                     </select>
                 </div>
 
-                {/* Exportar */}
                 <BotonesExportar datos={datosFiltrados} nombre="remates_tgr" />
 
-                {/* Recargar */}
                 <button
                     onClick={forzarRecarga}
                     disabled={recargando}
@@ -318,43 +288,23 @@ export default function RematesVisualizer({ datos = [] }) {
                         flexShrink: 0,
                     }}
                 >
-                    <RefreshCw
-                        size={13}
-                        style={{ animation: recargando ? "spin 1s linear infinite" : "none" }}
-                    />
+                    <RefreshCw size={13} style={{ animation: recargando ? "spin 1s linear infinite" : "none" }} />
                     {recargando ? "Recargando..." : "Recargar"}
                 </button>
             </div>
 
             {/* Tabla + Gráfico */}
-            <div style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 340px",
-                gap: "1rem",
-                alignItems: "start",
-            }}>
-
-                {/* Tabla */}
-                <div style={{
-                    background: "var(--surface)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "12px",
-                    overflow: "hidden",
-                }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "1rem", alignItems: "start" }}>
+                <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "12px", overflow: "hidden" }}>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
                         <thead>
                             <tr style={{ background: "var(--surface-2)", borderBottom: "1px solid var(--border)" }}>
                                 {COLUMNAS.map((col) => (
                                     <th key={col.key} style={{
-                                        textAlign: "left",
-                                        padding: "0.75rem 1rem",
-                                        color: "var(--text-muted)",
-                                        fontSize: "0.7rem",
-                                        fontFamily: "monospace",
-                                        fontWeight: 700,
-                                        letterSpacing: "0.06em",
-                                        textTransform: "uppercase",
-                                        whiteSpace: "nowrap",
+                                        textAlign: "left", padding: "0.75rem 1rem",
+                                        color: "var(--text-muted)", fontSize: "0.7rem",
+                                        fontFamily: "monospace", fontWeight: 700,
+                                        letterSpacing: "0.06em", textTransform: "uppercase", whiteSpace: "nowrap",
                                     }}>
                                         {col.label}
                                     </th>
@@ -364,29 +314,16 @@ export default function RematesVisualizer({ datos = [] }) {
                         <tbody>
                             {datosPagina.length === 0 ? (
                                 <tr>
-                                    <td
-                                        colSpan={COLUMNAS.length}
-                                        style={{
-                                            padding: "3rem",
-                                            textAlign: "center",
-                                            color: "var(--text-muted)",
-                                            fontFamily: "monospace",
-                                        }}
-                                    >
-                    // Sin resultados
+                                    <td colSpan={COLUMNAS.length} style={{ padding: "3rem", textAlign: "center", color: "var(--text-muted)", fontFamily: "monospace" }}>
+                                        // Sin resultados
                                     </td>
                                 </tr>
                             ) : (
                                 datosPagina.map((fila, i) => (
-                                    <tr
-                                        key={i}
-                                        style={{ borderBottom: "1px solid var(--border)" }}
-                                    >
+                                    <tr key={i} style={{ borderBottom: "1px solid var(--border)" }}>
                                         {COLUMNAS.map((col) => (
                                             <td key={col.key} style={{ padding: "0.75rem 1rem" }}>
-                                                {col.render
-                                                    ? col.render(fila[col.key], fila)
-                                                    : fila[col.key] ?? "—"}
+                                                {col.render ? col.render(fila[col.key], fila) : fila[col.key] ?? "—"}
                                             </td>
                                         ))}
                                     </tr>
@@ -395,77 +332,27 @@ export default function RematesVisualizer({ datos = [] }) {
                         </tbody>
                     </table>
 
-                    {/* Paginación */}
                     <div style={{
-                        padding: "0.75rem 1rem",
-                        borderTop: "1px solid var(--border)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
+                        padding: "0.75rem 1rem", borderTop: "1px solid var(--border)",
+                        display: "flex", alignItems: "center", justifyContent: "space-between",
                         background: "var(--surface-2)",
                     }}>
-                        <p style={{
-                            color: "var(--text-muted)",
-                            fontSize: "0.75rem",
-                            fontFamily: "monospace",
-                        }}>
+                        <p style={{ color: "var(--text-muted)", fontSize: "0.75rem", fontFamily: "monospace" }}>
                             Página {pagina} de {totalPaginas || 1}
                         </p>
                         <div style={{ display: "flex", gap: "0.5rem" }}>
-                            <button
-                                onClick={() => setPagina((p) => Math.max(1, p - 1))}
-                                disabled={pagina === 1}
-                                style={{
-                                    background: "var(--surface)",
-                                    border: "1px solid var(--border)",
-                                    color: pagina === 1 ? "var(--text-muted)" : "var(--text-secondary)",
-                                    padding: "4px 12px",
-                                    borderRadius: "6px",
-                                    fontSize: "0.8rem",
-                                    cursor: pagina === 1 ? "not-allowed" : "pointer",
-                                }}
-                            >‹</button>
-                            <button
-                                onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
-                                disabled={pagina === totalPaginas || totalPaginas === 0}
-                                style={{
-                                    background: "var(--surface)",
-                                    border: "1px solid var(--border)",
-                                    color: (pagina === totalPaginas || totalPaginas === 0)
-                                        ? "var(--text-muted)"
-                                        : "var(--text-secondary)",
-                                    padding: "4px 12px",
-                                    borderRadius: "6px",
-                                    fontSize: "0.8rem",
-                                    cursor: (pagina === totalPaginas || totalPaginas === 0)
-                                        ? "not-allowed"
-                                        : "pointer",
-                                }}
-                            >›</button>
+                            <button onClick={() => setPagina((p) => Math.max(1, p - 1))} disabled={pagina === 1} style={{ background: "var(--surface)", border: "1px solid var(--border)", color: pagina === 1 ? "var(--text-muted)" : "var(--text-secondary)", padding: "4px 12px", borderRadius: "6px", fontSize: "0.8rem", cursor: pagina === 1 ? "not-allowed" : "pointer" }}>‹</button>
+                            <button onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))} disabled={pagina === totalPaginas || totalPaginas === 0} style={{ background: "var(--surface)", border: "1px solid var(--border)", color: (pagina === totalPaginas || totalPaginas === 0) ? "var(--text-muted)" : "var(--text-secondary)", padding: "4px 12px", borderRadius: "6px", fontSize: "0.8rem", cursor: (pagina === totalPaginas || totalPaginas === 0) ? "not-allowed" : "pointer" }}>›</button>
                         </div>
                     </div>
                 </div>
 
-                {/* Gráfico */}
                 <GraficoConcentracion datos={datosFiltrados} />
             </div>
 
-            <p style={{
-                color: "var(--text-muted)",
-                fontSize: "0.7rem",
-                fontFamily: "monospace",
-                textAlign: "right",
-            }}>
-        // fuente: TGR Chile — revalidación automática cada 60 min
+            <p style={{ color: "var(--text-muted)", fontSize: "0.7rem", fontFamily: "monospace", textAlign: "right" }}>
+                // fuente: TGR Chile — revalidación automática cada 60 min
             </p>
-
-            {/* Modal ficha técnica */}
-            {fichaAbierta && (
-                <FichaTecnicaModal
-                    remate={fichaAbierta}
-                    onClose={() => setFichaAbierta(null)}
-                />
-            )}
         </div>
     );
 }
