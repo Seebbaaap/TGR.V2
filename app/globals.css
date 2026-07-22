@@ -493,13 +493,13 @@
 }
 
 @media (max-width: 768px) {
-    .only-desktop { display: none !important; }
-    .only-mobile  { display: flex !important; }
+    .dash-only-desktop { display: none !important; }
+    .dash-only-mobile  { display: flex !important; }
 }
 
 @media (min-width: 769px) {
-    .only-mobile  { display: none !important; }
-    .only-desktop { display: flex !important; }
+    .dash-only-mobile  { display: none !important; }
+    .dash-only-desktop { display: flex !important; }
 }
 
 /* KPI grid */
