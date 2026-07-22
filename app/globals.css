@@ -469,5 +469,58 @@
   .collab-sub {
     display: inline;
   }
+  /* Dashboard header */
+.dash-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 1.5rem;
+    gap: 0.75rem;
+}
+
+.dash-header-spacer {
+    flex: 1;
+}
+
+.btn-menu-hint {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+}
+
+@media (max-width: 768px) {
+    .only-desktop { display: none !important; }
+    .only-mobile  { display: flex !important; }
+}
+
+@media (min-width: 769px) {
+    .only-mobile  { display: none !important; }
+    .only-desktop { display: flex !important; }
+}
+
+/* KPI grid */
+.kpi-grid {
+    display: grid;
+    gap: 1rem;
+}
+.kpi-grid--4 { grid-template-columns: repeat(4, 1fr); }
+.kpi-grid--3 { grid-template-columns: repeat(3, 1fr); }
+.kpi-grid--2 { grid-template-columns: repeat(2, 1fr); }
+
+@media (max-width: 768px) {
+    .kpi-grid--4 { grid-template-columns: repeat(2, 1fr); }
+    .kpi-grid--3 { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Page padding variables */
+:root,
+[data-theme="dark"] {
+    --page-pad-x: 1.5rem;
+    --page-pad-y: 1.5rem;
+}
 }
 
