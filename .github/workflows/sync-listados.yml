@@ -1,0 +1,63 @@
+name: Sync listados Mercado Público
+
+# Listados: cada hora en :00 UTC (detalle usa otros minutos)
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: mercado-publico-api
+  cancel-in-progress: false
+
+jobs:
+  sync-listados:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Sync listados (licitaciones, OC, compra ágil)
+        env:
+          APP_URL: ${{ secrets.VERCEL_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          INICIO=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          echo "=== Sync listados ${INICIO} ==="
+          FALLO=0
+
+          sync_modulo() {
+            local MODULO="$1"
+            echo "── ${MODULO} ──"
+            HTTP_CODE=$(curl -sS -w "%{http_code}" -o "response-${MODULO}.json" \
+              "${APP_URL}/api/sync/mercado-publico?secret=${CRON_SECRET}&modulo=${MODULO}")
+            echo "HTTP ${HTTP_CODE}"
+            if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+              echo "::error::${MODULO} falló (HTTP ${HTTP_CODE})"
+              cat "response-${MODULO}.json" || true
+              FALLO=1
+              return
+            fi
+            jq -r '.sincronizados[0]? | "insertadas=\(.insertadas // 0) total=\(.total // 0)\(if .error then " ERROR: " + .error else "" end)"' \
+              "response-${MODULO}.json"
+          }
+
+          sync_modulo "licitaciones"
+          sync_modulo "ordenes-compra"
+          sync_modulo "compra-agil"
+
+          jq -s '{ sincronizados: [.[].sincronizados[]?] }' \
+            response-licitaciones.json response-ordenes-compra.json response-compra-agil.json \
+            > response.json 2>/dev/null || echo '{"sincronizados":[]}' > response.json
+
+          echo ""
+          jq -r '.sincronizados[]? | "[\(.modulo)] insertadas=\(.insertadas // 0) total=\(.total // 0)"' response.json
+          jq -r '[.sincronizados[]?.insertadas // 0] | add // 0' response.json | xargs -I{} echo "Total insertadas: {}"
+
+          {
+            echo "## Sync listados — ${INICIO}"
+            echo "| Módulo | Insertadas | Total |"
+            echo "|--------|------------|-------|"
+            jq -r '.sincronizados[]? | "| \(.modulo) | \(.insertadas // 0) | \(.total // 0) |"' response.json
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          [ "$FALLO" -eq 0 ] || exit 1

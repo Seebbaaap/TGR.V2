@@ -284,7 +284,7 @@ export function invalidarCache() {
     _cacheTimestamp = 0;
 }
 
-export function tiempoRestanteCache() {
+function tiempoRestanteCache() {
     if (!_cache) return 0;
     const transcurrido = Date.now() - _cacheTimestamp;
     const restante = CACHE_TTL_MS - transcurrido;

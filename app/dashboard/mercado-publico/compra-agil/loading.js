@@ -4,7 +4,7 @@ export default function Loading() {
     return (
         <LoadingState
             title="Cargando Compra Ágil"
-            description="Se están consultando registros desde la API de Mercado Público."
+            description="Cargando compras ágiles desde Supabase."
         />
     );
 }

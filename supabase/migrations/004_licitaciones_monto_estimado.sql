@@ -1,0 +1,3 @@
+ALTER TABLE licitaciones
+  ADD COLUMN IF NOT EXISTS monto_estimado NUMERIC,
+  ADD COLUMN IF NOT EXISTS moneda          TEXT DEFAULT 'CLP';

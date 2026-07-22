@@ -1,104 +1,51 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import MpSubnav from "./MpSubnav";
 import MercadoPublicoTable from "./MercadoPublicoTable";
 import SkeletonTabla from "@/components/shared/SkeletonTabla";
 import { useMercadoPublico } from "./useMercadoPublico";
+import AvisoDesdeDb from "./AvisoDesdeDb";
+import MercadoPublicoDetalleModal from "./MercadoPublicoDetalleModal";
+import EstadoBadge from "./EstadoBadge";
+import { formatFechaMp, formatMoneyMp } from "@/lib/mercado-publico/formatMp";
 
-function formatMoney(value) {
-    const amount = Number(value || 0);
-    if (!amount) return "—";
-    return new Intl.NumberFormat("es-CL", {
-        style: "currency",
-        currency: "CLP",
-        maximumFractionDigits: 0,
-    }).format(amount);
-}
-
-function formatFecha(valor) {
-    if (!valor) return "—";
-    const fecha = new Date(valor);
-    if (isNaN(fecha.getTime())) return valor;
-    return fecha.toLocaleDateString("es-CL", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-    });
-}
-
-const BADGE_ESTILOS = {
-    Publicada: { border: "#16a34a", bg: "rgba(22,163,74,0.12)", color: "#4ade80" },
-    Adjudicada: { border: "#0284c7", bg: "rgba(2,132,199,0.12)", color: "#38bdf8" },
-    Cerrada: { border: "#6b7280", bg: "rgba(107,114,128,0.12)", color: "#9ca3af" },
-    Desierta: { border: "#d97706", bg: "rgba(217,119,6,0.12)", color: "#fbbf24" },
-    Cancelada: { border: "#dc2626", bg: "rgba(220,38,38,0.12)", color: "#f87171" },
-    Suspendida: { border: "#ea580c", bg: "rgba(234,88,12,0.12)", color: "#fb923c" },
-};
-
-function EstadoBadge({ estado }) {
-    const s = BADGE_ESTILOS[estado] || {
-        border: "#6b7280",
-        bg: "rgba(107,114,128,0.12)",
-        color: "#9ca3af",
-    };
-
-    return (
-        <span
-            style={{
-                display: "inline-block",
-                padding: "0.15rem 0.65rem",
-                borderRadius: "9999px",
-                border: `1px solid ${s.border}`,
-                background: s.bg,
-                color: s.color,
-                fontSize: "0.72rem",
-                fontWeight: 500,
-            }}
-        >
-            {estado || "Sin estado"}
-        </span>
-    );
-}
+const PAGE_SIZE = 5;
 
 export default function CompraAgilVisualizer() {
-    const { data, loading, error, fecha, total } = useMercadoPublico("compra-agil");
-
     const [busqueda, setBusqueda] = useState("");
     const [estadoFiltro, setEstadoFiltro] = useState("");
     const [regionFiltro, setRegionFiltro] = useState("");
+    const [orden, setOrden] = useState("");
+    const [pagina, setPagina] = useState(1);
+    const [detalleAbierto, setDetalleAbierto] = useState(null);
+    const [parches, setParches] = useState({});
 
-    const estados = useMemo(() => {
-        const values = data.map((d) => d.Estado ?? d.estado).filter(Boolean);
-        return [...new Set(values)].sort();
-    }, [data]);
+    useEffect(() => {
+        setPagina(1);
+    }, [busqueda, estadoFiltro, regionFiltro, orden]);
 
-    const regiones = useMemo(() => {
-        const values = data.map((d) => d.Region ?? d.region).filter(Boolean);
-        return [...new Set(values)].sort();
-    }, [data]);
-
-    const filas = useMemo(() => {
-        return data.filter((row) => {
-            const nombre = row.Nombre ?? row.nombre ?? "";
-            const codigo = row.CodigoExterno ?? row.codigo ?? "";
-            const organismo = row.NombreOrganismo ?? row.organismo ?? "";
-            const estado = row.Estado ?? row.estado ?? "";
-            const region = row.Region ?? row.region ?? "";
-
-            const q = busqueda.toLowerCase();
-            const textMatch =
-                !q ||
-                nombre.toLowerCase().includes(q) ||
-                codigo.toLowerCase().includes(q) ||
-                organismo.toLowerCase().includes(q);
-
-            const estadoMatch = !estadoFiltro || estado === estadoFiltro;
-            const regionMatch = !regionFiltro || region === regionFiltro;
-
-            return textMatch && estadoMatch && regionMatch;
+    const { data, loading, refreshing, error, total, totalFiltrados, estados, regiones } =
+        useMercadoPublico("compra-agil", {
+            q: busqueda,
+            estado: estadoFiltro,
+            region: regionFiltro,
+            orden,
+            page: pagina,
+            pageSize: PAGE_SIZE,
         });
-    }, [data, busqueda, estadoFiltro, regionFiltro]);
+
+    const dataActualizada = useMemo(
+        () => data.map((r) => (parches[r.codigo] ? { ...r, ...parches[r.codigo] } : r)),
+        [data, parches]
+    );
+
+    function onDetalleCargado(fila) {
+        setParches((prev) => ({ ...prev, [fila.codigo]: fila }));
+    }
+
+    const hayFiltros = Boolean(busqueda || estadoFiltro || regionFiltro);
+    const mostrandoCarga = loading && data.length === 0;
 
     const columns = [
         {
@@ -106,7 +53,7 @@ export default function CompraAgilVisualizer() {
             label: "Código",
             render: (row) => (
                 <span style={{ color: "var(--text-muted)", fontSize: "0.75rem", fontFamily: "monospace" }}>
-                    {row.CodigoExterno ?? row.codigo ?? "—"}
+                    {row.codigo ?? "—"}
                 </span>
             ),
         },
@@ -114,17 +61,18 @@ export default function CompraAgilVisualizer() {
             key: "nombre",
             label: "Nombre",
             render: (row) => {
-                const nombre = row.Nombre ?? row.nombre ?? "—";
+                const nombre = row.nombre ?? "—";
                 return (
                     <span
                         style={{
                             display: "block",
-                            maxWidth: "320px",
+                            maxWidth: "220px",
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                             whiteSpace: "nowrap",
                             color: "var(--text-secondary)",
                             fontWeight: 600,
+                            minWidth: 0,
                         }}
                         title={nombre}
                     >
@@ -137,17 +85,18 @@ export default function CompraAgilVisualizer() {
             key: "organismo",
             label: "Organismo",
             render: (row) => {
-                const organismo = row.NombreOrganismo ?? row.organismo ?? "—";
+                const organismo = row.organismo ?? "—";
                 return (
                     <span
                         style={{
                             display: "block",
-                            maxWidth: "280px",
+                            maxWidth: "200px",
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                             whiteSpace: "nowrap",
                             color: "var(--text-muted)",
                             fontSize: "0.78rem",
+                            minWidth: 0,
                         }}
                         title={organismo}
                     >
@@ -159,23 +108,38 @@ export default function CompraAgilVisualizer() {
         {
             key: "estado",
             label: "Estado",
-            render: (row) => <EstadoBadge estado={row.Estado ?? row.estado} />,
+            render: (row) => <EstadoBadge estado={row.estado} />,
         },
         {
             key: "region",
             label: "Región",
-            render: (row) => (
-                <span style={{ color: "var(--text-muted)", fontSize: "0.78rem" }}>
-                    {row.Region ?? row.region ?? "—"}
-                </span>
-            ),
+            render: (row) => {
+                const region = row.region ?? "—";
+                return (
+                    <span
+                        style={{
+                            display: "block",
+                            maxWidth: "140px",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            color: "var(--text-muted)",
+                            fontSize: "0.78rem",
+                            minWidth: 0,
+                        }}
+                        title={region}
+                    >
+                        {region}
+                    </span>
+                );
+            },
         },
         {
             key: "fechaCierre",
             label: "Cierre",
             render: (row) => (
                 <span style={{ color: "var(--text-muted)", fontSize: "0.78rem", whiteSpace: "nowrap" }}>
-                    {formatFecha(row.FechaCierre ?? row.fechaCierre)}
+                    {formatFechaMp(row.fechaCierre)}
                 </span>
             ),
         },
@@ -184,14 +148,14 @@ export default function CompraAgilVisualizer() {
             label: "Monto",
             render: (row) => (
                 <span style={{ color: "var(--accent)", fontWeight: 600, fontFamily: "monospace" }}>
-                    {formatMoney(row.MontoEstimado ?? row.monto)}
+                    {formatMoneyMp(row.monto)}
                 </span>
             ),
         },
     ];
 
     return (
-        <section style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+        <section className="flex flex-col gap-5 sm:gap-6">
             <MpSubnav />
 
             <div
@@ -199,7 +163,7 @@ export default function CompraAgilVisualizer() {
                     borderRadius: "1rem",
                     border: "1px solid color-mix(in srgb, var(--accent) 20%, var(--border))",
                     background: "color-mix(in srgb, var(--accent) 4%, var(--surface))",
-                    padding: "1.25rem",
+                    padding: "1.35rem",
                 }}
             >
                 <p
@@ -216,11 +180,10 @@ export default function CompraAgilVisualizer() {
                     Mercado Público
                 </p>
                 <h1
+                    className="text-2xl font-extrabold sm:text-[1.8rem]"
                     style={{
                         margin: 0,
                         color: "var(--text-secondary)",
-                        fontSize: "1.8rem",
-                        fontWeight: 800,
                     }}
                 >
                     Compra Ágil
@@ -234,157 +197,149 @@ export default function CompraAgilVisualizer() {
                         maxWidth: "60ch",
                     }}
                 >
-                    Visualización de registros obtenidos desde la API de Mercado Público.
+                    Compras ágiles sincronizadas desde Mercado Público
                 </p>
             </div>
 
-            <div
-                style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-                    gap: "0.9rem",
-                }}
-            >
+            <div className="kpi-grid kpi-grid--4">
                 {[
-                    { label: "Registros", value: total ?? data.length ?? 0 },
-                    { label: "Filtrados", value: filas.length },
+                    { label: "Registros", value: total ?? 0 },
+                    { label: "Filtrados", value: totalFiltrados ?? 0 },
                     { label: "Estados", value: estados.length },
                     { label: "Regiones", value: regiones.length },
                 ].map((item) => (
-                    <div
-                        key={item.label}
-                        style={{
-                            borderRadius: "0.9rem",
-                            border: "1px solid var(--border)",
-                            background: "var(--surface)",
-                            padding: "1rem",
-                        }}
-                    >
-                        <p style={{ margin: 0, color: "var(--text-muted)", fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                            {item.label}
-                        </p>
-                        <p style={{ margin: 0, marginTop: "0.35rem", color: "var(--text-secondary)", fontSize: "1.35rem", fontWeight: 800 }}>
-                            {item.value}
-                        </p>
+                    <div key={item.label} className="kpi-card">
+                        <p className="kpi-card-label">{item.label}</p>
+                        <p className="kpi-card-value">{item.value}</p>
                     </div>
                 ))}
             </div>
+            <AvisoDesdeDb
+                visible
+                loading={loading || refreshing}
+                hayFilas={total > 0 || data.length > 0}
+                error={error}
+            />
 
-            {error && (
-                <div
+            <div
+                style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "0.75rem",
+                    borderRadius: "1rem",
+                    border: "1px solid var(--border)",
+                    background: "var(--surface)",
+                    padding: "1.1rem",
+                }}
+            >
+                <input
+                    type="text"
+                    placeholder="Buscar por nombre, código u organismo..."
+                    value={busqueda}
+                    onChange={(e) => setBusqueda(e.target.value)}
+                    className="min-w-0 flex-1 basis-full sm:basis-56 sm:min-w-[200px]"
                     style={{
-                        padding: "0.75rem 1rem",
+                        padding: "0.7rem 0.9rem",
                         borderRadius: "0.75rem",
-                        border: "1px solid var(--warning)",
-                        background: "color-mix(in srgb, var(--warning) 10%, transparent)",
-                        color: "var(--warning)",
-                        fontSize: "0.82rem",
-                    }}
-                >
-                    {error}
-                </div>
-            )}
-
-            {!loading && (
-                <div
-                    style={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: "0.75rem",
-                        borderRadius: "1rem",
                         border: "1px solid var(--border)",
-                        background: "var(--surface)",
-                        padding: "1rem",
+                        background: "var(--surface-2)",
+                        color: "var(--text-secondary)",
+                        fontSize: "0.84rem",
+                        outline: "none",
+                    }}
+                />
+
+                <select
+                    value={estadoFiltro}
+                    onChange={(e) => setEstadoFiltro(e.target.value)}
+                    className="min-w-0 flex-1 basis-[calc(50%-0.375rem)] sm:basis-36 sm:min-w-[130px]"
+                    style={{
+                        padding: "0.7rem 0.9rem",
+                        borderRadius: "0.75rem",
+                        border: "1px solid var(--border)",
+                        background: "var(--surface-2)",
+                        color: "var(--text-secondary)",
+                        fontSize: "0.84rem",
+                        outline: "none",
                     }}
                 >
-                    <input
-                        type="text"
-                        placeholder="Buscar por nombre, código u organismo..."
-                        value={busqueda}
-                        onChange={(e) => setBusqueda(e.target.value)}
-                        style={{
-                            flex: 1,
-                            minWidth: "240px",
-                            padding: "0.7rem 0.9rem",
-                            borderRadius: "0.75rem",
-                            border: "1px solid var(--border)",
-                            background: "var(--surface-2)",
-                            color: "var(--text-secondary)",
-                            fontSize: "0.84rem",
-                            outline: "none",
-                        }}
-                    />
+                    <option value="">Todos los estados</option>
+                    {estados.map((e) => (
+                        <option key={e} value={e}>
+                            {e}
+                        </option>
+                    ))}
+                </select>
 
-                    <select
-                        value={estadoFiltro}
-                        onChange={(e) => setEstadoFiltro(e.target.value)}
+                <select
+                    value={regionFiltro}
+                    onChange={(e) => setRegionFiltro(e.target.value)}
+                    className="min-w-0 flex-1 basis-[calc(50%-0.375rem)] sm:basis-36 sm:min-w-[130px]"
+                    style={{
+                        padding: "0.7rem 0.9rem",
+                        borderRadius: "0.75rem",
+                        border: "1px solid var(--border)",
+                        background: "var(--surface-2)",
+                        color: "var(--text-secondary)",
+                        fontSize: "0.84rem",
+                        outline: "none",
+                    }}
+                >
+                    <option value="">Todas las regiones</option>
+                    {regiones.map((r) => (
+                        <option key={r} value={r}>
+                            {r}
+                        </option>
+                    ))}
+                </select>
+
+                <select
+                    value={orden}
+                    onChange={(e) => setOrden(e.target.value)}
+                    className="min-w-0 flex-1 basis-full sm:basis-44 sm:min-w-[160px]"
+                    style={{
+                        padding: "0.7rem 0.9rem",
+                        borderRadius: "0.75rem",
+                        border: "1px solid var(--border)",
+                        background: "var(--surface-2)",
+                        color: "var(--text-secondary)",
+                        fontSize: "0.84rem",
+                        outline: "none",
+                    }}
+                >
+                    <option value="">Orden predeterminado</option>
+                    <option value="precio-desc">Precio (Mayor a menor)</option>
+                    <option value="precio-asc">Precio (Menor a mayor)</option>
+                    <option value="fecha-desc">Fecha (Mayor a menor)</option>
+                    <option value="fecha-asc">Fecha (Menor a mayor)</option>
+                </select>
+
+                {hayFiltros && (
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setBusqueda("");
+                            setEstadoFiltro("");
+                            setRegionFiltro("");
+                        }}
                         style={{
-                            minWidth: "180px",
                             padding: "0.7rem 0.9rem",
                             borderRadius: "0.75rem",
-                            border: "1px solid var(--border)",
-                            background: "var(--surface-2)",
-                            color: "var(--text-secondary)",
+                            border: "1px solid var(--danger)",
+                            background: "transparent",
+                            color: "var(--danger)",
                             fontSize: "0.84rem",
-                            outline: "none",
+                            cursor: "pointer",
                         }}
                     >
-                        <option value="">Todos los estados</option>
-                        {estados.map((e) => (
-                            <option key={e} value={e}>
-                                {e}
-                            </option>
-                        ))}
-                    </select>
+                        Limpiar filtros
+                    </button>
+                )}
+            </div>
 
-                    <select
-                        value={regionFiltro}
-                        onChange={(e) => setRegionFiltro(e.target.value)}
-                        style={{
-                            minWidth: "180px",
-                            padding: "0.7rem 0.9rem",
-                            borderRadius: "0.75rem",
-                            border: "1px solid var(--border)",
-                            background: "var(--surface-2)",
-                            color: "var(--text-secondary)",
-                            fontSize: "0.84rem",
-                            outline: "none",
-                        }}
-                    >
-                        <option value="">Todas las regiones</option>
-                        {regiones.map((r) => (
-                            <option key={r} value={r}>
-                                {r}
-                            </option>
-                        ))}
-                    </select>
-
-                    {(busqueda || estadoFiltro || regionFiltro) && (
-                        <button
-                            onClick={() => {
-                                setBusqueda("");
-                                setEstadoFiltro("");
-                                setRegionFiltro("");
-                            }}
-                            style={{
-                                padding: "0.7rem 0.9rem",
-                                borderRadius: "0.75rem",
-                                border: "1px solid var(--danger)",
-                                background: "transparent",
-                                color: "var(--danger)",
-                                fontSize: "0.84rem",
-                                cursor: "pointer",
-                            }}
-                        >
-                            Limpiar filtros
-                        </button>
-                    )}
-                </div>
-            )}
-
-            {loading ? (
+            {mostrandoCarga ? (
                 <SkeletonTabla filas={8} columnas={7} />
-            ) : filas.length === 0 ? (
+            ) : !loading && totalFiltrados === 0 ? (
                 <div
                     style={{
                         padding: "3rem 1rem",
@@ -399,24 +354,32 @@ export default function CompraAgilVisualizer() {
                         Sin resultados
                     </p>
                     <p style={{ margin: 0, fontSize: "0.84rem" }}>
-                        {busqueda || estadoFiltro || regionFiltro
+                        {hayFiltros
                             ? "No hay registros que coincidan con los filtros aplicados."
-                            : "La API no devolvió datos para la fecha actual o el ticket no está configurado."}
+                            : "No hay compras ágiles en Supabase todavía."}
                     </p>
                 </div>
             ) : (
                 <MercadoPublicoTable
                     columns={columns}
-                    rows={filas}
+                    rows={dataActualizada}
+                    onVerDetalle={setDetalleAbierto}
                     emptyMessage="Sin registros disponibles."
                     labelPlural="compras ágiles"
+                    paginaTamano={PAGE_SIZE}
+                    pagina={pagina}
+                    totalFilas={totalFiltrados}
+                    onPaginaChange={setPagina}
                 />
             )}
 
-            {fecha && (
-                <p style={{ textAlign: "right", fontSize: "0.74rem", color: "var(--text-muted)", margin: 0 }}>
-                    Fecha consultada: {fecha}
-                </p>
+            {detalleAbierto && (
+                <MercadoPublicoDetalleModal
+                    row={parches[detalleAbierto.codigo] ?? detalleAbierto}
+                    modulo="compra-agil"
+                    onClose={() => setDetalleAbierto(null)}
+                    onDetalleCargado={onDetalleCargado}
+                />
             )}
         </section>
     );

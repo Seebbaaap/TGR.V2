@@ -4,7 +4,7 @@ export default function Loading() {
     return (
         <LoadingState
             title="Cargando módulo de Mercado Público"
-            description="Se está preparando la información del panel y sus secciones."
+            description="Preparando el módulo de Mercado Público."
         />
     );
 }
