@@ -44,10 +44,16 @@ export default function GraficoConcentracion({ datos }) {
                             color: "var(--text-muted)",
                             fontSize: "0.68rem",
                             fontFamily: "monospace",
-                            width: "88px",
+                            width: "72px",
+                            maxWidth: "30%",
                             textAlign: "right",
                             flexShrink: 0,
-                        }}>
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                        }}
+                            title={comuna}
+                        >
                             {comuna}
                         </p>
 

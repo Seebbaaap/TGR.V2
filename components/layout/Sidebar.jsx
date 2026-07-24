@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { X } from "lucide-react";
 
 const nav = [
     {
@@ -49,233 +50,233 @@ export default function Sidebar({ open = false, onClose }) {
     const enMP = pathname.startsWith("/dashboard/mercado-publico");
 
     return (
-        <aside
-            className={`dash-sidebar${open ? " dash-open" : ""}`}
-            style={{
-                width: "16rem",
-                minHeight: "100vh",
-                background: "var(--surface)",
-                borderRight: "1px solid var(--border)",
-                display: "flex",
-                flexDirection: "column",
-                flexShrink: 0,
-            }}
-        >
+        <>
+            {open && (
+                <div
+                    className="fixed inset-0 z-40 bg-black/55 lg:hidden"
+                    onClick={onClose}
+                    aria-hidden="true"
+                />
+            )}
 
-            {/* ── LOGO ── */}
-            <div style={{
-                padding: "1rem 1rem 0.85rem",
-                borderBottom: "1px solid var(--border)",
-            }}>
-                {/* Imagen del logo — ancho completo, bien proporcionada */}
+            <aside
+                className={`fixed inset-y-0 left-0 z-50 flex min-h-dvh shrink-0 flex-col transition-transform duration-200 ease-out lg:static lg:z-auto lg:translate-x-0 ${
+                    open ? "translate-x-0" : "-translate-x-full pointer-events-none lg:pointer-events-auto"
+                }`}
+                style={{
+                    width: "var(--sidebar-w)",
+                    background: "var(--surface)",
+                    borderRight: "1px solid var(--border)",
+                }}
+            >
                 <div style={{
-                    width: "100%",
-                    borderRadius: "10px",
-                    overflow: "hidden",
-                    border: "1px solid var(--border)",
-                    marginBottom: "0.6rem",
-                    lineHeight: 0,
+                    padding: "1rem 1rem 0.85rem",
+                    borderBottom: "1px solid var(--border)",
                 }}>
-                    <Image
-                        src="/logo-hublab.jpg"
-                        alt="HubLab logo"
-                        width={220}
-                        height={80}
-                        style={{
+                    <div className="mb-2 flex items-start justify-between gap-2">
+                        <div style={{
                             width: "100%",
-                            height: "auto",
-                            objectFit: "contain",
-                            display: "block",
-                        }}
-                    />
-                </div>
-
-                {/* Texto debajo del logo, centrado */}
-                <div style={{ textAlign: "center" }}>
-                    <div style={{
-                        fontFamily: "monospace",
-                        fontWeight: 800,
-                        fontSize: "1rem",
-                        lineHeight: 1.1,
-                    }}>
-                        <span style={{ color: "var(--text-secondary)" }}>Estado</span>
-                        <span style={{ color: "var(--accent)" }}>HUB</span>
+                            borderRadius: "10px",
+                            overflow: "hidden",
+                            border: "1px solid var(--border)",
+                            lineHeight: 0,
+                        }}>
+                            <Image
+                                src="/logo-hublab.jpg"
+                                alt="HubLab logo"
+                                width={220}
+                                height={80}
+                                style={{
+                                    width: "100%",
+                                    height: "auto",
+                                    objectFit: "contain",
+                                    display: "block",
+                                }}
+                            />
+                        </div>
+                        <button
+                            type="button"
+                            aria-label="Cerrar menú"
+                            onClick={onClose}
+                            className="mt-1 shrink-0 rounded-lg p-1.5 lg:hidden"
+                            style={{
+                                border: "1px solid var(--border)",
+                                background: "var(--surface-2)",
+                                color: "var(--text-muted)",
+                                cursor: "pointer",
+                            }}
+                        >
+                            <X size={16} />
+                        </button>
                     </div>
-                    <p style={{
-                        fontSize: "0.6rem",
-                        color: "var(--text-muted)",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.1em",
-                        marginTop: "3px",
-                    }}>
-                        APIs Públicas del Estado
-                    </p>
-                </div>
-            </div>
 
-            {/* ── NAV ── */}
-            <nav style={{ flex: 1, padding: "1rem 0.75rem", overflowY: "auto" }}>
-                {nav.map((grupo) => (
-                    <div key={grupo.grupo} style={{ marginBottom: "0.5rem" }}>
+                    <div style={{ textAlign: "center" }}>
+                        <div style={{
+                            fontFamily: "monospace",
+                            fontWeight: 800,
+                            fontSize: "1rem",
+                            lineHeight: 1.1,
+                        }}>
+                            <span style={{ color: "var(--text-secondary)" }}>Estado</span>
+                            <span style={{ color: "var(--accent)" }}>HUB</span>
+                        </div>
                         <p style={{
                             fontSize: "0.6rem",
-                            fontWeight: 700,
-                            letterSpacing: "0.15em",
-                            textTransform: "uppercase",
                             color: "var(--text-muted)",
-                            padding: "0 0.25rem",
-                            marginBottom: "0.5rem",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.1em",
+                            marginTop: "3px",
                         }}>
-                            {grupo.grupo}
+                            APIs Públicas del Estado
                         </p>
-
-                        <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-                            {grupo.items.map((item) => {
-                                const isTGR = item.href === "/dashboard/tgr";
-                                const isMP = item.href.startsWith("/dashboard/mercado-publico");
-                                const active = isTGR
-                                    ? pathname.startsWith("/dashboard/tgr")
-                                    : isMP
-                                        ? pathname.startsWith("/dashboard/mercado-publico")
-                                        : pathname === item.href;
-
-                                return (
-                                    <li key={item.href}>
-                                        {/* Card principal */}
-                                        <Link
-                                            href={item.href}
-                                            onClick={onClose}
-                                            style={{
-                                                display: "flex",
-                                                alignItems: "center",
-                                                gap: "0.75rem",
-                                                padding: "0.65rem 0.75rem",
-                                                borderRadius: "0.6rem",
-                                                textDecoration: "none",
-                                                background: active
-                                                    ? "color-mix(in srgb, var(--accent) 10%, var(--surface-2))"
-                                                    : "var(--surface-2)",
-                                                border: `1px solid ${active
-                                                    ? "color-mix(in srgb, var(--accent) 30%, var(--border))"
-                                                    : "var(--border)"}`,
-                                                transition: "all 150ms ease",
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                if (!active) e.currentTarget.style.background =
-                                                    "color-mix(in srgb, var(--accent) 5%, var(--surface-2))";
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                if (!active) e.currentTarget.style.background = "var(--surface-2)";
-                                            }}
-                                        >
-                                            {/* Ícono */}
-                                            <span style={{
-                                                display: "flex",
-                                                alignItems: "center",
-                                                justifyContent: "center",
-                                                width: "32px",
-                                                height: "32px",
-                                                borderRadius: "7px",
-                                                background: active
-                                                    ? "color-mix(in srgb, var(--accent) 15%, var(--surface))"
-                                                    : "var(--surface)",
-                                                color: active ? "var(--accent)" : "var(--text-muted)",
-                                                flexShrink: 0,
-                                                border: "1px solid var(--border)",
-                                            }}>
-                                                {item.icon}
-                                            </span>
-
-                                            {/* Texto */}
-                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                <p style={{
-                                                    fontSize: "0.82rem",
-                                                    fontWeight: 600,
-                                                    color: active ? "var(--accent)" : "var(--text-secondary)",
-                                                    lineHeight: 1.2,
-                                                    margin: 0,
-                                                }}>
-                                                    {item.label}
-                                                </p>
-                                                <p style={{
-                                                    fontSize: "0.68rem",
-                                                    color: "var(--text-muted)",
-                                                    marginTop: "1px",
-                                                    whiteSpace: "nowrap",
-                                                    overflow: "hidden",
-                                                    textOverflow: "ellipsis",
-                                                    margin: 0,
-                                                }}>
-                                                    {item.desc}
-                                                </p>
-                                            </div>
-
-                                            {/* Badge punto */}
-                                            {item.badge && isTGR && active && (
-                                                <span style={{
-                                                    width: "7px",
-                                                    height: "7px",
-                                                    borderRadius: "50%",
-                                                    background: "var(--accent)",
-                                                    boxShadow: "0 0 6px var(--accent)",
-                                                    flexShrink: 0,
-                                                }} />
-                                            )}
-                                        </Link>
-
-                                        {/* Sub-items MP — solo visibles cuando estás en esa sección */}
-                                        {isMP && enMP && (
-                                            <ul style={{
-                                                listStyle: "none",
-                                                paddingLeft: "0.75rem",
-                                                marginTop: "0.25rem",
-                                                display: "flex",
-                                                flexDirection: "column",
-                                                gap: "1px",
-                                                borderLeft: "1px solid var(--border)",
-                                                marginLeft: "1.25rem",
-                                            }}>
-                                                {mpItems.map((sub) => {
-                                                    const subActive = pathname === sub.href;
-                                                    return (
-                                                        <li key={sub.href}>
-                                                            <Link
-                                                                href={sub.href}
-                                                                onClick={onClose}
-                                                                style={{
-                                                                    display: "block",
-                                                                    padding: "0.35rem 0.6rem",
-                                                                    borderRadius: "0.4rem",
-                                                                    fontSize: "0.78rem",
-                                                                    fontWeight: subActive ? 600 : 400,
-                                                                    color: subActive ? "var(--accent)" : "var(--text-secondary)",
-                                                                    textDecoration: "none",
-                                                                    background: subActive
-                                                                        ? "color-mix(in srgb, var(--accent) 8%, transparent)"
-                                                                        : "transparent",
-                                                                    transition: "all 120ms ease",
-                                                                }}
-                                                                onMouseEnter={(e) => {
-                                                                    if (!subActive) e.currentTarget.style.color = "var(--text)";
-                                                                }}
-                                                                onMouseLeave={(e) => {
-                                                                    if (!subActive) e.currentTarget.style.color = "var(--text-secondary)";
-                                                                }}
-                                                            >
-                                                                {sub.label}
-                                                            </Link>
-                                                        </li>
-                                                    );
-                                                })}
-                                            </ul>
-                                        )}
-                                    </li>
-                                );
-                            })}
-                        </ul>
                     </div>
-                ))}
-            </nav>
-        </aside>
+                </div>
+
+                <nav style={{ flex: 1, padding: "1rem 0.75rem", overflowY: "auto" }}>
+                    {nav.map((grupo) => (
+                        <div key={grupo.grupo} style={{ marginBottom: "0.5rem" }}>
+                            <p style={{
+                                fontSize: "0.6rem",
+                                fontWeight: 700,
+                                letterSpacing: "0.15em",
+                                textTransform: "uppercase",
+                                color: "var(--text-muted)",
+                                padding: "0 0.25rem",
+                                marginBottom: "0.5rem",
+                            }}>
+                                {grupo.grupo}
+                            </p>
+
+                            <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                                {grupo.items.map((item) => {
+                                    const isTGR = item.href === "/dashboard/tgr";
+                                    const isMP = item.href.startsWith("/dashboard/mercado-publico");
+                                    const active = isTGR
+                                        ? pathname.startsWith("/dashboard/tgr")
+                                        : isMP
+                                            ? pathname.startsWith("/dashboard/mercado-publico")
+                                            : pathname === item.href;
+
+                                    return (
+                                        <li key={item.href}>
+                                            <Link
+                                                href={item.href}
+                                                onClick={onClose}
+                                                style={{
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: "0.75rem",
+                                                    padding: "0.65rem 0.75rem",
+                                                    borderRadius: "0.6rem",
+                                                    textDecoration: "none",
+                                                    background: active
+                                                        ? "color-mix(in srgb, var(--accent) 10%, var(--surface-2))"
+                                                        : "var(--surface-2)",
+                                                    border: `1px solid ${active
+                                                        ? "color-mix(in srgb, var(--accent) 30%, var(--border))"
+                                                        : "var(--border)"}`,
+                                                    transition: "all 150ms ease",
+                                                }}
+                                            >
+                                                <span style={{
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    justifyContent: "center",
+                                                    width: "32px",
+                                                    height: "32px",
+                                                    borderRadius: "7px",
+                                                    background: active
+                                                        ? "color-mix(in srgb, var(--accent) 15%, var(--surface))"
+                                                        : "var(--surface)",
+                                                    color: active ? "var(--accent)" : "var(--text-muted)",
+                                                    flexShrink: 0,
+                                                    border: "1px solid var(--border)",
+                                                }}>
+                                                    {item.icon}
+                                                </span>
+
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <p style={{
+                                                        fontSize: "0.82rem",
+                                                        fontWeight: 600,
+                                                        color: active ? "var(--accent)" : "var(--text-secondary)",
+                                                        lineHeight: 1.2,
+                                                        margin: 0,
+                                                    }}>
+                                                        {item.label}
+                                                    </p>
+                                                    <p style={{
+                                                        fontSize: "0.68rem",
+                                                        color: "var(--text-muted)",
+                                                        marginTop: "1px",
+                                                        whiteSpace: "nowrap",
+                                                        overflow: "hidden",
+                                                        textOverflow: "ellipsis",
+                                                        margin: 0,
+                                                    }}>
+                                                        {item.desc}
+                                                    </p>
+                                                </div>
+
+                                                {item.badge && isTGR && active && (
+                                                    <span style={{
+                                                        width: "7px",
+                                                        height: "7px",
+                                                        borderRadius: "50%",
+                                                        background: "var(--accent)",
+                                                        boxShadow: "0 0 6px var(--accent)",
+                                                        flexShrink: 0,
+                                                    }} />
+                                                )}
+                                            </Link>
+
+                                            {isMP && enMP && (
+                                                <ul style={{
+                                                    listStyle: "none",
+                                                    paddingLeft: "0.75rem",
+                                                    marginTop: "0.25rem",
+                                                    display: "flex",
+                                                    flexDirection: "column",
+                                                    gap: "1px",
+                                                    borderLeft: "1px solid var(--border)",
+                                                    marginLeft: "1.25rem",
+                                                }}>
+                                                    {mpItems.map((sub) => {
+                                                        const subActive = pathname === sub.href;
+                                                        return (
+                                                            <li key={sub.href}>
+                                                                <Link
+                                                                    href={sub.href}
+                                                                    onClick={onClose}
+                                                                    style={{
+                                                                        display: "block",
+                                                                        padding: "0.35rem 0.6rem",
+                                                                        borderRadius: "0.4rem",
+                                                                        fontSize: "0.78rem",
+                                                                        fontWeight: subActive ? 600 : 400,
+                                                                        color: subActive ? "var(--accent)" : "var(--text-secondary)",
+                                                                        textDecoration: "none",
+                                                                        background: subActive
+                                                                            ? "color-mix(in srgb, var(--accent) 8%, transparent)"
+                                                                            : "transparent",
+                                                                        transition: "all 120ms ease",
+                                                                    }}
+                                                                >
+                                                                    {sub.label}
+                                                                </Link>
+                                                            </li>
+                                                        );
+                                                    })}
+                                                </ul>
+                                            )}
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </div>
+                    ))}
+                </nav>
+            </aside>
+        </>
     );
 }

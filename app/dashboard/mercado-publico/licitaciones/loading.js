@@ -4,7 +4,7 @@ export default function Loading() {
     return (
         <LoadingState
             title="Cargando Licitaciones"
-            description="Se está consultando la información de licitaciones."
+            description="Cargando licitaciones desde Supabase."
         />
     );
 }

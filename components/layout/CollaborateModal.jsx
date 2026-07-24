@@ -75,11 +75,12 @@ export default function CollaborateModal({ onClose }) {
                 {/* Cerrar */}
                 <button
                     onClick={onClose}
+                    aria-label="Cerrar"
                     style={{
                         position: "absolute", top: "1rem", right: "1rem",
                         background: "var(--surface-2)", border: "1px solid var(--border)",
                         borderRadius: "0.5rem", padding: "0.35rem", cursor: "pointer",
-                        color: "var(--text-muted)", display: "flex", alignItems: "center",
+                        color: "var(--danger)", display: "flex", alignItems: "center",
                     }}
                 >
                     <X size={16} />

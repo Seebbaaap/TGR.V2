@@ -10,7 +10,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="es" data-theme="dark" suppressHydrationWarning>
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

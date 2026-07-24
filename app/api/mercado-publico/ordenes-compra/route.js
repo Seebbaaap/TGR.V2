@@ -1,16 +1,10 @@
 import { NextResponse } from "next/server";
-import { getOrdenesCompra } from "@/services/mercado-publico/ordenesCompraService";
+import { getOrdenesCompra } from "@/services/mercado-publico/listadoMercadoPublicoService";
 
 export async function GET(request) {
     try {
-        const { searchParams } = new URL(request.url);
-
-        const resultado = await getOrdenesCompra({
-            codigo: searchParams.get("codigo") || "",
-            pagina: Number(searchParams.get("pagina") || 1),
-            tamanoPagina: Number(searchParams.get("tamanoPagina") || 50),
-        });
-
+        const params = Object.fromEntries(request.nextUrl.searchParams.entries());
+        const resultado = await getOrdenesCompra(params);
         return NextResponse.json(resultado);
     } catch (error) {
         return NextResponse.json(

@@ -1,0 +1,18 @@
+ALTER TABLE ordenes_compra
+  ADD COLUMN IF NOT EXISTS nombre                TEXT,
+  ADD COLUMN IF NOT EXISTS codigo_licitacion      TEXT,
+  ADD COLUMN IF NOT EXISTS descripcion            TEXT,
+  ADD COLUMN IF NOT EXISTS total_neto             NUMERIC,
+  ADD COLUMN IF NOT EXISTS impuestos              NUMERIC,
+  ADD COLUMN IF NOT EXISTS total                  NUMERIC,
+  ADD COLUMN IF NOT EXISTS nombre_unidad          TEXT,
+  ADD COLUMN IF NOT EXISTS actividad_comprador    TEXT,
+  ADD COLUMN IF NOT EXISTS direccion_unidad       TEXT,
+  ADD COLUMN IF NOT EXISTS comuna_unidad          TEXT,
+  ADD COLUMN IF NOT EXISTS region_unidad          TEXT,
+  ADD COLUMN IF NOT EXISTS actividad_proveedor    TEXT,
+  ADD COLUMN IF NOT EXISTS direccion_proveedor    TEXT,
+  ADD COLUMN IF NOT EXISTS comuna_proveedor       TEXT,
+  ADD COLUMN IF NOT EXISTS region_proveedor       TEXT,
+  ADD COLUMN IF NOT EXISTS cantidad_items         INTEGER,
+  ADD COLUMN IF NOT EXISTS items                  JSONB DEFAULT '[]'::jsonb;
