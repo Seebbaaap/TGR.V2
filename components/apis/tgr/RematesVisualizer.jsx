@@ -209,6 +209,41 @@ export default function RematesVisualizer({ datos = [] }) {
     return (
         <div className="flex min-w-0 flex-col gap-5 sm:gap-6">
 
+            {/* Listado de terrenos → tarjetas apiladas en teléfonos */}
+            <style>{`
+                @media (max-width: 640px) {
+                    .tgr-table thead { display: none; }
+                    .tgr-table,
+                    .tgr-table tbody,
+                    .tgr-table tr,
+                    .tgr-table td { display: block; width: 100%; }
+                    .tgr-table tr {
+                        border-bottom: 1px solid var(--border);
+                        padding: 0.35rem 0;
+                    }
+                    .tgr-table td {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        gap: 1rem;
+                        padding: 0.45rem 1rem !important;
+                        text-align: right;
+                    }
+                    .tgr-table td::before {
+                        content: attr(data-label);
+                        font-family: monospace;
+                        font-size: 0.62rem;
+                        letter-spacing: 0.06em;
+                        text-transform: uppercase;
+                        font-weight: 700;
+                        color: var(--text-muted);
+                        flex-shrink: 0;
+                    }
+                    .tgr-table td.tgr-td-vacio { justify-content: center; text-align: center; }
+                    .tgr-table td.tgr-td-vacio::before { content: none; }
+                }
+            `}</style>
+
             {/* KPIs */}
             <div className="kpi-grid kpi-grid--4">
                 <KpiGrande icono={Building2} titulo="Propiedades Únicas" valor={datos.length.toLocaleString("es-CL")} color="var(--accent)" />
@@ -291,9 +326,9 @@ export default function RematesVisualizer({ datos = [] }) {
             </div>
 
             {/* Tabla + Gráfico */}
-            <div className="grid gap-4" style={{ gridTemplateColumns: "1fr 340px" }}>
+            <div className="tgr-main-grid">
                 <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "12px", overflow: "hidden" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
+                    <table className="tgr-table" style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
                         <thead>
                             <tr style={{ background: "var(--surface-2)", borderBottom: "1px solid var(--border)" }}>
                                 {COLUMNAS.map((col) => (
@@ -311,7 +346,7 @@ export default function RematesVisualizer({ datos = [] }) {
                         <tbody>
                             {datosPagina.length === 0 ? (
                                 <tr>
-                                    <td colSpan={COLUMNAS.length} style={{ padding: "3rem", textAlign: "center", color: "var(--text-muted)", fontFamily: "monospace" }}>
+                                    <td className="tgr-td-vacio" colSpan={COLUMNAS.length} style={{ padding: "3rem", textAlign: "center", color: "var(--text-muted)", fontFamily: "monospace" }}>
                                         // Sin resultados
                                     </td>
                                 </tr>
@@ -319,7 +354,7 @@ export default function RematesVisualizer({ datos = [] }) {
                                 datosPagina.map((fila, i) => (
                                     <tr key={i} style={{ borderBottom: "1px solid var(--border)" }}>
                                         {COLUMNAS.map((col) => (
-                                            <td key={col.key} style={{ padding: "0.75rem 1rem" }}>
+                                            <td key={col.key} data-label={col.label} style={{ padding: "0.75rem 1rem" }}>
                                                 {col.render ? col.render(fila[col.key], fila) : fila[col.key] ?? "—"}
                                             </td>
                                         ))}
