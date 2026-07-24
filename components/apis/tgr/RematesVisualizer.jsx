@@ -204,8 +204,55 @@ export default function RematesVisualizer({ datos = [] }) {
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
 
+            {/* Estilos responsive (tablets y teléfonos) */}
+            <style>{`
+                /* Tabla + gráfico: se apilan en tablets/pantallas medianas */
+                @media (max-width: 900px) {
+                    .tgr-main-grid { grid-template-columns: 1fr !important; }
+                }
+                /* Filtros a ancho completo en teléfonos */
+                @media (max-width: 600px) {
+                    .tgr-filtro-busqueda,
+                    .tgr-filtro-comuna {
+                        flex: 1 1 100% !important;
+                        min-width: 0 !important;
+                    }
+                    /* La tabla se convierte en tarjetas apiladas */
+                    .tgr-table thead { display: none; }
+                    .tgr-table,
+                    .tgr-table tbody,
+                    .tgr-table tr,
+                    .tgr-table td { display: block; width: 100%; }
+                    .tgr-table tr {
+                        border-bottom: 1px solid var(--border);
+                        padding: 0.35rem 0;
+                    }
+                    .tgr-table td {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        gap: 1rem;
+                        padding: 0.45rem 1rem !important;
+                        text-align: right;
+                    }
+                    .tgr-table td::before {
+                        content: attr(data-label);
+                        font-family: monospace;
+                        font-size: 0.62rem;
+                        letter-spacing: 0.06em;
+                        text-transform: uppercase;
+                        font-weight: 700;
+                        color: var(--text-muted);
+                        flex-shrink: 0;
+                    }
+                    /* La celda "Sin resultados" ocupa todo el ancho, sin etiqueta */
+                    .tgr-table td.tgr-td-vacio { justify-content: center; text-align: center; }
+                    .tgr-table td.tgr-td-vacio::before { content: none; }
+                }
+            `}</style>
+
             {/* KPIs */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "1rem" }}>
                 <KpiGrande
                     icono={Building2}
                     titulo="Propiedades Únicas"
@@ -244,7 +291,7 @@ export default function RematesVisualizer({ datos = [] }) {
                 alignItems: "center",
             }}>
                 {/* Búsqueda */}
-                <div style={{ flex: 1, minWidth: "220px", position: "relative" }}>
+                <div className="tgr-filtro-busqueda" style={{ flex: 1, minWidth: "220px", position: "relative" }}>
                     <Search size={14} style={{
                         position: "absolute", left: "10px", top: "50%",
                         transform: "translateY(-50%)", color: "var(--accent)",
@@ -269,7 +316,7 @@ export default function RematesVisualizer({ datos = [] }) {
                 </div>
 
                 {/* Selector de comuna */}
-                <div style={{ position: "relative", minWidth: "200px" }}>
+                <div className="tgr-filtro-comuna" style={{ position: "relative", minWidth: "200px" }}>
                     <Filter size={13} style={{
                         position: "absolute", left: "10px", top: "50%",
                         transform: "translateY(-50%)", color: "var(--warning)",
@@ -327,7 +374,7 @@ export default function RematesVisualizer({ datos = [] }) {
             </div>
 
             {/* Tabla + Gráfico */}
-            <div style={{
+            <div className="tgr-main-grid" style={{
                 display: "grid",
                 gridTemplateColumns: "1fr 340px",
                 gap: "1rem",
@@ -341,7 +388,7 @@ export default function RematesVisualizer({ datos = [] }) {
                     borderRadius: "12px",
                     overflow: "hidden",
                 }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
+                    <table className="tgr-table" style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
                         <thead>
                             <tr style={{ background: "var(--surface-2)", borderBottom: "1px solid var(--border)" }}>
                                 {COLUMNAS.map((col) => (
@@ -365,6 +412,7 @@ export default function RematesVisualizer({ datos = [] }) {
                             {datosPagina.length === 0 ? (
                                 <tr>
                                     <td
+                                        className="tgr-td-vacio"
                                         colSpan={COLUMNAS.length}
                                         style={{
                                             padding: "3rem",
@@ -383,7 +431,7 @@ export default function RematesVisualizer({ datos = [] }) {
                                         style={{ borderBottom: "1px solid var(--border)" }}
                                     >
                                         {COLUMNAS.map((col) => (
-                                            <td key={col.key} style={{ padding: "0.75rem 1rem" }}>
+                                            <td key={col.key} data-label={col.label} style={{ padding: "0.75rem 1rem" }}>
                                                 {col.render
                                                     ? col.render(fila[col.key], fila)
                                                     : fila[col.key] ?? "—"}

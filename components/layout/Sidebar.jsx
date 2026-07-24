@@ -44,20 +44,23 @@ const mpItems = [
     { href: "/dashboard/mercado-publico/ordenes-compra", label: "Órdenes de Compra" },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ open = false, onClose }) {
     const pathname = usePathname();
     const enMP = pathname.startsWith("/dashboard/mercado-publico");
 
     return (
-        <aside style={{
-            width: "16rem",
-            minHeight: "100vh",
-            background: "var(--surface)",
-            borderRight: "1px solid var(--border)",
-            display: "flex",
-            flexDirection: "column",
-            flexShrink: 0,
-        }}>
+        <aside
+            className={`dash-sidebar${open ? " dash-open" : ""}`}
+            style={{
+                width: "16rem",
+                minHeight: "100vh",
+                background: "var(--surface)",
+                borderRight: "1px solid var(--border)",
+                display: "flex",
+                flexDirection: "column",
+                flexShrink: 0,
+            }}
+        >
 
             {/* ── LOGO ── */}
             <div style={{
@@ -141,6 +144,7 @@ export default function Sidebar() {
                                         {/* Card principal */}
                                         <Link
                                             href={item.href}
+                                            onClick={onClose}
                                             style={{
                                                 display: "flex",
                                                 alignItems: "center",
@@ -237,6 +241,7 @@ export default function Sidebar() {
                                                         <li key={sub.href}>
                                                             <Link
                                                                 href={sub.href}
+                                                                onClick={onClose}
                                                                 style={{
                                                                     display: "block",
                                                                     padding: "0.35rem 0.6rem",

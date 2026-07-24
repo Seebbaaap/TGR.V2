@@ -313,6 +313,21 @@ export default function FichaTecnicaModal({ remate, onClose }) {
 
     return (
         <>
+            {/* Estilos responsive del modal (tablets y teléfonos) */}
+            <style>{`
+                @media (max-width: 640px) {
+                    .ficha-titulo { font-size: 1.35rem !important; }
+                    .ficha-stats { grid-template-columns: 1fr !important; }
+                    .ficha-stats > div { border-right: none !important; border-bottom: 1px solid var(--border); }
+                    .ficha-stats > div:last-child { border-bottom: none; }
+                    .ficha-cols { grid-template-columns: 1fr !important; }
+                    .ficha-periodos { grid-template-columns: 1fr 1fr !important; }
+                    .ficha-acciones { width: 100%; }
+                    .ficha-acciones a,
+                    .ficha-acciones button { flex: 1; justify-content: center; text-align: center; }
+                }
+            `}</style>
+
             <div
                 onClick={onClose}
                 style={{
@@ -425,6 +440,7 @@ export default function FichaTecnicaModal({ remate, onClose }) {
                 <div style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
                     <div>
                         <h2
+                            className="ficha-titulo"
                             style={{
                                 color: "var(--success)",
                                 fontSize: "1.8rem",
@@ -441,6 +457,7 @@ export default function FichaTecnicaModal({ remate, onClose }) {
                     </div>
 
                     <div
+                        className="ficha-stats"
                         style={{
                             display: "grid",
                             gridTemplateColumns: "repeat(3, 1fr)",
@@ -483,7 +500,7 @@ export default function FichaTecnicaModal({ remate, onClose }) {
                         </div>
                     </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                    <div className="ficha-cols" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                         <div
                             style={{
                                 background: "var(--surface-2)",
@@ -568,7 +585,7 @@ export default function FichaTecnicaModal({ remate, onClose }) {
                             </p>
                         </div>
 
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
+                        <div className="ficha-periodos" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
                             <Campo label="Desde" valor={periodoDesde} />
                             <Campo label="Hasta" valor={periodoHasta} />
                             <Campo label="Extensión" valor={extension} />
@@ -617,7 +634,7 @@ export default function FichaTecnicaModal({ remate, onClose }) {
                         ⊙ Fuente: TGR · actualizado hoy
                     </p>
 
-                    <div style={{ display: "flex", gap: "0.75rem" }}>
+                    <div className="ficha-acciones" style={{ display: "flex", gap: "0.75rem" }}>
                         <a
                             href="https://remates.tgr.cl/"
                             target="_blank"
